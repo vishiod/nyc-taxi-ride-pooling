@@ -31,3 +31,6 @@ data/
 *.parquet
 *.csv.gz
 yellow_tripdata*
+
+# Allow Overleaf upload bundle
+!thesis_overleaf.zip
