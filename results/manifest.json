@@ -1,0 +1,26 @@
+{
+  "paper": "EnsembleNet: Statistically Validated Demand Forecasting and Constraint-Aware Ride Pooling for Urban Shared Taxi Systems",
+  "source_of_truth": "Numeric values frozen from Taxi_Clubbing (1)/main.tex published tables/figures (canonical paper numbers).",
+  "purpose": "Regenerate paper tables/figures without re-running the full Kaggle+training simulation.",
+  "files": [
+    "bootstrap_confidence_intervals.csv",
+    "bootstrap_distributions.npz",
+    "cluster_sensitivity.csv",
+    "cv_fold_rmse.csv",
+    "dataset_stats.csv",
+    "economic_impact.csv",
+    "friedman_test.json",
+    "hyperparameter_table.csv",
+    "kfold_cv_summary.csv",
+    "model_results.csv",
+    "poolability_classifier_metrics.csv",
+    "poolability_feature_importance.csv",
+    "poolability_rf_scores.csv",
+    "poolability_rf_summary.json",
+    "pooling_baselines.csv",
+    "pooling_statistics.csv",
+    "scaling_constants.json",
+    "sota_comparison.csv",
+    "statistical_significance_tests.csv"
+  ]
+}

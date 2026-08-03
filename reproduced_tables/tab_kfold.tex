@@ -1,0 +1,14 @@
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+\textbf{Model} & \multicolumn{2}{c}{\textbf{5-Fold CV}} & \multicolumn{2}{c}{\textbf{10-Fold CV}} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+ & \textbf{Mean RMSE} & \textbf{Std} & \textbf{Mean RMSE} & \textbf{Std} \\
+\midrule
+Linear Regression & 6.11 & 0.42 & 6.09 & 0.31 \\
+XGBoost & 4.50 & 0.28 & 4.48 & 0.21 \\
+Gradient Boosting & 4.75 & 0.31 & 4.73 & 0.23 \\
+LR-LSTM Hybrid & 6.05 & 0.38 & 6.03 & 0.27 \\
+\textbf{Stacking} & \textbf{4.31} & \textbf{0.22} & \textbf{4.29} & \textbf{0.17} \\
+Blending & 4.66 & 0.27 & 4.64 & 0.20 \\
+\bottomrule
+\end{tabular}

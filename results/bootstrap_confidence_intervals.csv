@@ -1,0 +1,5 @@
+Metric,Point_Estimate,CI95_Lower,CI95_Upper
+Pool Success Rate (%),16.06,15.86,16.31
+Avg Saving per Pooled Pair (%),19.74,19.67,19.81
+Avg Compatibility Score,0.658,0.657,0.66
+Annual Cost Savings (USD M),28.7,28.3,29.1

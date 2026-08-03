@@ -1,0 +1,5 @@
+Study,Best_Model,Dataset,R2,MAPE_pct,RMSE,Notes
+Kim et al. 2020,LR-LSTM,NYC Yellow Taxi,0.572,15.2,,Per-zone Murray Hill; primary benchmark
+Liu et al. 2021,XGBoost,NYC Yellow Taxi 2018-20,0.984,,,COVID-19 disruption period
+This work – Stacking,Stacking + Ridge,NYC Yellow Taxi,0.9922,10.19,4.3008,14-model study; statistically validated
+This work – Blending,Blending + Ridge,NYC Yellow Taxi,0.9909,9.3,4.6587,Best MAPE and RMSLE (0.1226)

@@ -1,0 +1,20 @@
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrrr@{}}
+\toprule
+\textbf{Model} & \textbf{RMSE}$\downarrow$ & \textbf{MAE}$\downarrow$ & \textbf{MAPE\,\%}$\downarrow$ & \textbf{R\textsuperscript{2}}$\uparrow$ & \textbf{RMSLE}$\downarrow$ \\
+\midrule
+Linear Regression & 6.1085 & 3.9940 & 13.23 & 0.9843 & 0.1675 \\
+Ridge & 6.1087 & 3.9939 & 13.20 & 0.9843 & 0.1671 \\
+Lasso & 6.1149 & 3.9956 & 12.70 & 0.9843 & 0.1712 \\
+Decision Tree & 8.1824 & 5.4351 & 14.98 & 0.9718 & 0.1897 \\
+Random Forest & 7.7603 & 5.0601 & 17.18 & 0.9747 & 0.1949 \\
+XGBoost & \underline{4.4974} & 2.9739 & 11.52 & \underline{0.9915} & 0.1476 \\
+Gradient Boosting & 4.7478 & 3.3183 & 13.96 & 0.9905 & 0.1737 \\
+LR-LSTM Hybrid & 6.0529 & 3.8904 & 11.64 & 0.9846 & 0.1443 \\
+Simple Averaging & 4.7206 & 3.1748 & 11.51 & 0.9906 & 0.1427 \\
+Weighted Averaging & 4.7184 & 3.1732 & 11.51 & 0.9906 & 0.1427 \\
+Voting Regressor & 4.7206 & 3.1748 & 11.51 & 0.9906 & 0.1427 \\
+\textbf{Stacking} & \textbf{4.3008} & \textbf{2.8242} & \underline{10.19} & \textbf{0.9922} & \underline{0.1394} \\
+XGBoost-LSTM & 4.9658 & 3.3563 & 13.47 & 0.9896 & 0.1635 \\
+\textbf{Blending} & 4.6587 & \underline{2.9353} & \textbf{9.30} & 0.9909 & \textbf{0.1226} \\
+\bottomrule
+\end{tabular*}

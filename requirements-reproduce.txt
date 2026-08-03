@@ -1,0 +1,10 @@
+# Lightweight deps to regenerate paper tables/figures from results/
+# (no TensorFlow, Kaggle, or training stack required)
+pandas>=1.5.0
+numpy>=1.23.0
+scipy>=1.9.0
+matplotlib>=3.6.0
+scikit-learn>=1.2.0
+jupyter>=1.0.0
+notebook>=6.5.0
+ipykernel>=6.20.0

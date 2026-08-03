@@ -1,0 +1,11 @@
+Metric,Value,CI95_Lower,CI95_Upper
+Total rides analysed,106055.0,,
+Rides successfully pooled,17034.0,,
+Pool success rate (%),16.06,15.86,16.31
+Number of pools formed,8517.0,,
+Avg compatibility score,0.658,0.657,0.66
+Avg estimated saving (%),19.74,19.67,19.81
+Cost savings sample (USD),20846.0,,
+Distance saved sample (miles),5956.0,,
+CO2 reduced sample (kg),2448.0,,
+Time saved sample (hours),397.0,,

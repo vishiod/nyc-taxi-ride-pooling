@@ -1,0 +1,18 @@
+{
+  "selected_model": "Random Forest",
+  "n_test": 10000,
+  "class_balance": {
+    "Not Poolable": 0.8463,
+    "Poolable": 0.1537
+  },
+  "confusion": {
+    "TN": 8461,
+    "FP": 2,
+    "FN": 1535,
+    "TP": 2
+  },
+  "roc_auc": 0.6434,
+  "average_precision": 0.2251,
+  "baseline_ap": 0.154,
+  "threshold_note": "Near-zero recall: model predicts majority class for almost all instances"
+}

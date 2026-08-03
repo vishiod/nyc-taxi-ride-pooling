@@ -1,0 +1,871 @@
+%%
+%% Dissertation Paper – Elsevier CAS Double-Column Format
+%%
+\documentclass[a4paper,fleqn]{cas-dc}
+
+\usepackage[numbers,sort&compress]{natbib}
+\let\printorcid\relax
+\usepackage{caption}
+\usepackage{subcaption}
+\captionsetup{skip=4pt}
+\captionsetup[subfigure]{skip=2pt}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage[verbose=silent]{microtype}
+\usepackage{graphicx}
+\usepackage{threeparttable}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{multirow}
+\usepackage{rotating}
+\usepackage{url}
+\usepackage{array}
+\usepackage{tikz}
+\usepackage{float}
+\usepackage{placeins}
+
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  citecolor=blue,
+  urlcolor=blue,
+  filecolor=blue,
+  bookmarksnumbered=true,
+  bookmarksopen=true
+}
+\renewcommand{\sectionautorefname}{Section}
+\renewcommand{\subsectionautorefname}{Section}
+\renewcommand{\subsubsectionautorefname}{Section}
+\renewcommand{\figureautorefname}{Figure}
+\renewcommand{\tableautorefname}{Table}
+
+%%%Author definitions
+\def\tsc#1{\csdef{#1}{\textsc{\lowercase{#1}}\xspace}}
+\tsc{WGM}
+\tsc{QE}
+\tsc{EP}
+\tsc{PMS}
+\tsc{BEC}
+\tsc{DE}
+
+\makeatletter
+% Suppress footer on title page
+\def\ps@pprintTitle{%
+  \let\@oddhead\@empty
+  \let\@evenhead\@empty
+  \def\@oddfoot{}%
+  \let\@evenfoot\@oddfoot}
+% Clear the Elsevier preprint mark used in the running footer
+\def\pprintMarks{}
+% Redefine the cas running footer to remove author/preprint line entirely
+\AtBeginDocument{%
+  \def\ps@cas{%
+    \def\@oddhead{\small\hfill\rightmark\hfill}%
+    \def\@evenhead{\small\hfill\leftmark\hfill}%
+    \def\@oddfoot{\hfill\small\thepage\hfill}%
+    \def\@evenfoot{\hfill\small\thepage\hfill}}%
+  \pagestyle{cas}%
+}
+\makeatother
+
+\begin{document}
+\let\WriteBookmarks\relax
+\def\floatpagepagefraction{1}
+\def\textpagefraction{.001}
+
+% Short title
+\shorttitle{Ensemble-Based Taxi Demand Forecasting and Ride Pooling Optimisation}
+
+% Short author
+\shortauthors{V. Sharma et al.}
+
+% Main title
+\title[mode = title]{EnsembleNet: Statistically Validated Demand Forecasting and Constraint-Aware Ride Pooling for Urban Shared Taxi Systems}
+
+% Authors
+\author[1]{Vishal Sharma}[
+  orcid=0009-0009-5137-2297
+]
+\ead{vishalsharma01386@gmail.com}
+\cormark[1]
+
+\author[1]{Md Noor-A-Rahim}[]
+\ead{noor.a.rahim@cs.ucc.ie}
+
+\author[2]{MD All Moon Tasir}[]
+
+\affiliation[1]{organization={School of Computer Science and Information Technology, University College Cork},
+  city={Cork},
+  country={Ireland}}
+
+\affiliation[2]{organization={Faculty of Information Science and Technology, Universiti Kebangsaan Malaysia},
+  city={Bangi},
+  country={Malaysia}}
+
+\cortext[cor1]{Corresponding author}
+
+% Abstract
+\begin{abstract}
+Urban taxi systems face mounting pressure to reduce congestion, cost, and emissions, yet existing studies address demand forecasting and ride pooling in isolation and rarely apply rigorous statistical validation.  This study introduces a unified data-driven framework combining ensemble-based demand forecasting with a multi-criteria ride pooling algorithm, evaluated on New York City Yellow Taxi records.  A novel LR-LSTM hybrid architecture decomposes demand into a linear trend and a non-linear residual, and six ensemble strategies are benchmarked against eight individual estimators under a strictly chronological train-test protocol, with a Friedman test confirming statistical significance of all observed differences.  The ride pooling component enforces temporal, spatial, directional, and detour constraints, with city-scale economic and environmental impact quantified via bootstrap estimation.  Results show that the Stacking ensemble substantially outperforms the established LR-LSTM benchmark, and the pooling algorithm delivers meaningful reductions in per-trip cost and carbon emissions, demonstrating a statistically validated and deployable approach to shared taxi system management.
+\end{abstract}
+
+\begin{keywords}
+Taxi demand prediction \sep Ride pooling \sep Ensemble learning \sep LR-LSTM hybrid \sep Spatial-temporal forecasting \sep NYC Yellow Taxi \sep Urban mobility \sep Statistical significance
+\end{keywords}
+
+\hypersetup{pageanchor=false}
+\makeatletter
+\let\Hy@tempa\@empty
+\makeatother
+\maketitle
+\thispagestyle{empty}
+\hypersetup{pageanchor=true}
+
+% ============================================================
+\section{Introduction}
+% ============================================================
+
+Urbanisation is reshaping mobility at an unprecedented pace: the United Nations projects that 68\% of the world's population will reside in cities by 2050~\cite{un2018wup}, intensifying congestion, greenhouse gas emissions, and demand for scalable, on-demand transport.  In New York City alone, taxis and ride-hailing vehicles account for hundreds of millions of trips annually, contributing substantially to urban congestion and vehicular emissions~\cite{taxinyc_dataset}.  Shared-ride taxi services sit at the intersection of these pressures, capable of door-to-door coverage that mass transit cannot provide, yet environmentally costly when vehicles carry a single passenger.  Realising the potential of shared taxis therefore requires two complementary capabilities: accurate \emph{demand forecasting}, enabling operators to pre-position vehicles and reduce idle mileage, and effective \emph{ride pooling}, so that compatible trips share a vehicle and reduce per-passenger cost and emissions.
+
+Taxi demand forecasting is a spatio-temporal prediction problem of significant practical complexity.  Demand varies sharply by time of day, day of week, weather conditions, and geographic zone, requiring models that can capture both linear trends and non-linear interaction effects simultaneously.  Ensemble methods have shown consistent superiority in tabular prediction tasks~\cite{breiman2001rf,chen2016xgboost,wolpert1992stacking}, yet no prior study has systematically compared a comprehensive suite of ensemble strategies on the same spatio-temporal demand task with non-parametric statistical validation.  Ride pooling, independently, requires matching algorithms that balance pool rate, per-trip savings, and realistic passenger-acceptance constraints, yet most operational studies either report theoretical upper bounds~\cite{santi2014quantifying} or fleet-level outcomes without pairwise economic quantification~\cite{alonso2017demand}.
+
+Existing literature has explored each capability in isolation.  Demand-forecasting studies, from early data-driven baselines~\cite{dia2002object} and streaming prediction approaches~\cite{moreira2013predicting} to deep spatio-temporal networks~\cite{zhang2017deep,xu2017realtime,kim2020hybrid}, demonstrate steady accuracy gains, yet rarely validate whether observed improvements across model classes are statistically significant.  Ride-pooling analyses such as the shareability network of~\cite{santi2014quantifying} and the real-time framework of~\cite{alonso2017demand} report theoretical upper bounds rather than evaluating operational algorithms under realistic passenger-acceptance constraints.  Neither body of work simultaneously quantifies economic and environmental impact at both the trip and city scale.  This study addresses all three gaps within a single, reproducible framework evaluated on two years of publicly available New York City Yellow Taxi records.
+
+This paper addresses these gaps through three contributions.
+
+First, a systematic ensemble benchmarking study evaluates fourteen forecasting models on NYC Yellow Taxi data under strictly chronological splits.  A Friedman non-parametric test confirms that observed differences across model classes are statistically significant, with Stacking achieving R\textsuperscript{2}~=~0.9922 and MAPE~=~10.19\%, establishing a strong upper bound for spatio-temporal taxi demand prediction.
+
+Second, a novel LR-LSTM hybrid architecture is proposed in which a Linear Regression stage extracts the deterministic demand trend and an LSTM stage models the non-linear residuals.  An XGBoost-LSTM variant is introduced alongside for comparison, allowing the contribution of each residual-modelling strategy to be isolated and quantified.
+
+Third, a constraint-aware ride pooling algorithm is developed that applies five cascading compatibility filters reflecting realistic passenger-acceptance requirements.  The algorithm achieves a 16.06\% pool rate on 106,055 sampled trips, with projected annual savings of USD~21.6~million and approximately 2{,}539~tonnes of CO\textsubscript{2} for New York City (scaled from the sample at a factor of $110\text{M}/106{,}055 \approx 1{,}037$), validated through bootstrap resampling with 10,000 iterations.
+
+The remainder of this paper is organised as follows.  \autoref{sec:related} reviews related work.  \autoref{sec:methods} describes the dataset, preprocessing, spatial clustering, feature engineering, and the ride pooling algorithm.  \autoref{sec:models} presents the proposed EnsembleNet framework, including individual model architectures, the LR-LSTM hybrid, and the six ensemble strategies.  \autoref{sec:eval} reports experimental results across all metrics.  \autoref{sec:discussion} discusses implications, limitations, and future work.  \autoref{sec:conclusion} concludes.
+
+\autoref{fig:intro} presents a high-level overview of the two complementary subsystems that constitute the proposed framework.  The left panel captures the spatial dimension: raw pickup coordinates are partitioned into $K{=}40$ data-driven clusters using MiniBatch KMeans, converting a continuous geographic space into a tractable set of neighbourhood-level demand zones.  Within each zone, demand is aggregated into 10-minute temporal bins, producing a feature matrix that is then enriched with lag features, time-of-day cyclical encodings, weather measurements, and public holiday indicators.  The right panel captures the operational dimension: for any 5-minute window of incoming trips, pairs of rides are evaluated against five cascading filters covering time proximity, origin proximity, destination proximity, route direction alignment, and maximum detour ratio.  Only pairs clearing all five filters receive a weighted compatibility score; a greedy matching pass then assembles the highest-scoring pairs into shared rides.  The two subsystems are designed to operate sequentially in production: demand forecasts inform vehicle pre-positioning, while the pooling algorithm processes the resulting trip requests in real time.  Together they address both the supply-side optimisation problem and the demand-side coordination problem that characterise shared urban mobility.
+
+\begin{figure*}[!tb]
+  \centering
+  \includegraphics[width=\linewidth, height=0.45\textheight, keepaspectratio]{Taxi_Clubbing (1)/Figures/Intro.pdf}
+  \caption{Overview of the proposed EnsembleNet framework for NYC shared taxi systems. The left panel shows data-driven spatial clustering of pickup locations into $K{=}40$ demand zones and the temporal demand patterns observed within each zone. The right panel depicts the multi-criteria ride pooling matching pipeline, showing how compatible trip pairs are identified and how cost and environmental savings are estimated.}
+  \label{fig:intro}
+\end{figure*}
+
+
+% ============================================================
+\section{Related Work}
+\label{sec:related}
+% ============================================================
+
+Prior research on urban taxi systems can be organised across three threads: demand forecasting, ride pooling, and ensemble methods.
+
+Early demand forecasting methods relied on ARIMA variants, which capture linear temporal patterns but cannot encode spatial correlations.  Moreira-Matias et al.~\cite{moreira2013predicting} demonstrated streaming-based demand prediction from real-time GPS data, while Lv et al.~\cite{lv2015traffic} showed that deep learning outperforms time-series baselines on large-scale traffic flow data.  Zhang et al.~\cite{zhang2017deep} introduced ST-ResNet, which treats citywide demand grids as image sequences processed by deep residual convolutions.  Xu et al.~\cite{xu2017realtime} confirmed that LSTM networks outperform feed-forward architectures for real-time NYC taxi demand by exploiting sequential autocorrelation.  Ma et al.~\cite{ma2015long} and Ke et al.~\cite{ke2017short} further validated LSTM superiority for transportation speed and ride-hailing demand tasks respectively.  Kim et al.~\cite{kim2020hybrid} proposed the LR-LSTM model, a two-stage hybrid achieving R\textsuperscript{2}~=~0.572 and MAPE~=~15.2\% on Murray Hill, NYC, which serves as the primary benchmark in this study.  Liu et al.~\cite{liu2021epidemic} reported XGBoost attaining R\textsuperscript{2}~=~0.984 on NYC Yellow Taxi data, highlighting distributional shift as a key challenge.  Guo et al.~\cite{guo2019attention} proposed attention-based spatio-temporal graph convolutional networks, demonstrating that graph structures capture inter-zone dependencies more effectively than grid-based methods.  Li et al.~\cite{li2018diffusion} introduced DCRNN, which encodes directional diffusion on road graphs, though this requires detailed road-topology data unavailable in the present study.  Zhou et al.~\cite{zhou2018predicting} applied attention mechanisms to multi-step citywide passenger demand prediction.  More recently, Liu et al.~\cite{liu2023staeformer} proposed STAEformer, which augments a vanilla Transformer with spatio-temporal adaptive embeddings and achieves state-of-the-art results on standard traffic speed and flow benchmarks including METR-LA and PEMS-BAY; because STAEformer targets road-network speed prediction rather than zone-level pickup-count forecasting, direct numerical comparison with the present study is not feasible, but it represents the current frontier of spatio-temporal deep learning and motivates future work on graph-based demand forecasting.
+
+On the ride pooling side, Santi et al.~\cite{santi2014quantifying} established via shareability network analysis that ride consolidation can achieve up to $\sim$40\% cumulative trip-length reduction across the NYC fleet under idealised conditions, providing a theoretical upper bound for any operational algorithm.  Alonso-Mora et al.~\cite{alonso2017demand} developed a real-time framework serving nearly the entire NYC demand with 15\% fewer vehicles via dynamic trip-vehicle assignment.  Agatz et al.~\cite{agatz2012ridesharing} reviewed dynamic ridesharing optimisation and concluded that greedy heuristics offer a practical balance between solution quality and tractability.  Furuhata et al.~\cite{furuhata2013ridesharing} identified four matching criteria, namely temporal flexibility, spatial proximity, directional compatibility, and willingness to share, which directly inform the five-filter design of Algorithm~\ref{alg:ride_pool}.  Tang et al.~\cite{tang2018joint} characterised the joint distribution of taxi passenger counts and waiting times, providing empirical support for the 8-minute temporal threshold used in this study.
+
+In the ensemble learning literature, Wolpert~\cite{wolpert1992stacking} formalised stacked generalisation, showing that a meta-learner trained on out-of-fold predictions reduces overfitting.  Breiman~\cite{breiman2001rf} introduced Random Forests and Friedman~\cite{friedman2001gbm} developed Gradient Boosting Machines, establishing the foundations for the ensemble strategies evaluated here.  Chen and Guestrin~\cite{chen2016xgboost} refined boosting with regularisation and sparse-matrix support to produce XGBoost.  Zheng et al.~\cite{zheng2020hybrid} demonstrated hybrid deep learning and gradient boosting for traffic speed prediction, motivating the XGBoost-LSTM hybrid in this study.  No prior work has systematically compared six ensemble strategies on the same spatio-temporal demand task with non-parametric statistical validation.  \autoref{tab:litreview} summarises representative prior work and the gaps that this study addresses.
+
+\begin{table*}[t]
+\centering
+\caption{Summary of representative prior work on taxi demand forecasting, ride pooling, and ensemble methods.\label{tab:litreview}}
+\small
+\begin{tabular}{@{}p{2.8cm}p{2.2cm}p{2.4cm}p{5.8cm}@{}}
+\toprule
+\textbf{Study} & \textbf{Domain} & \textbf{Dataset} & \textbf{Method / Key Finding} \\
+\toprule
+Kim et al.~\cite{kim2020hybrid} & Demand forecast & NYC Yellow Taxi & LR-LSTM two-stage hybrid; R\textsuperscript{2}=0.572, MAPE=15.2\% \\
+Xu et al.~\cite{xu2017realtime} & Demand forecast & NYC Taxi & LSTM RNN; real-time prediction; MAPE~$\approx$12.5\% \\
+Zhang et al.~\cite{zhang2017deep} & Crowd flow & Beijing / NYC & ST-ResNet; deep residual convolutions \\
+Liu et al.~\cite{liu2021epidemic} & Demand forecast & NYC Yellow Taxi 2018--20 & XGBoost; R\textsuperscript{2}=0.984; COVID-19 shift \\
+Yao et al.~\cite{yao2018deeptraffic} & Demand forecast & NYC Taxi & DeepMVST; multi-view spatio-temporal \\
+Zhang et al.~\cite{zhang2023deeptrip} & Trip prediction & GPS traces & DeepTrip; 81\% next-trip origin accuracy \\
+Li et al.~\cite{li2018diffusion} & Traffic forecast & Road network & DCRNN; diffusion on directed graphs \\
+Santi et al.~\cite{santi2014quantifying} & Ride pooling & NYC Taxi & Shareability networks; 40\% theoretical bound \\
+Alonso-Mora et al.~\cite{alonso2017demand} & Ride pooling & NYC Taxi & Dynamic trip-vehicle assignment; 98\% demand served \\
+Agatz et al.~\cite{agatz2012ridesharing} & Ride pooling & Various & Optimisation review; tractability trade-offs \\
+Furuhata et al.~\cite{furuhata2013ridesharing} & Ride pooling & Various & Four matching criteria; operational survey \\
+Wolpert~\cite{wolpert1992stacking} & Ensemble & Synthetic & Stacked generalisation; OOF meta-learning \\
+\textbf{This work} & Both & NYC Yellow Taxi & 14-model benchmark + ride pooling; stat.\ validated \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+% ============================================================
+\section{Methods and Materials}
+\label{sec:methods}
+% ============================================================
+
+This section describes the full experimental methodology, covering the dataset and its preprocessing, spatial clustering, feature engineering, the ride pooling algorithm, the demand forecasting models, and the evaluation metrics.  \autoref{fig:pipeline} illustrates the complete processing pipeline.
+
+\begin{figure*}[!tb]
+  \centering
+  \includegraphics[width=\linewidth, height=0.52\textheight, keepaspectratio]{Taxi_Clubbing (1)/Figures/complete_pipeline.pdf}
+  \caption{Complete research pipeline from raw data to city-scale impact: data ingestion, outlier removal, spatial clustering, temporal binning, feature engineering, model training and evaluation, ride pooling matching, bootstrap validation, and economic and CO\textsubscript{2} impact projection.}
+  \label{fig:pipeline}
+\end{figure*}
+
+\autoref{fig:pipeline} traces the end-to-end data flow through six sequential stages.  Stage~1 ingests the raw NYC Yellow Taxi Trip Records and applies coordinate boundary filtering, duration filtering, and fare filtering to remove implausible records.  Stage~2 constructs spatial zones via MiniBatch KMeans on a stratified 5\% sample of pickup coordinates, choosing $K{=}40$ as the cluster count validated by inertia elbow, silhouette score, and downstream prediction RMSE criteria.  Stage~3 aggregates trips into 10-minute bins per cluster and engineers the full feature set described in \autoref{tab:features}.  Stage~4 trains all 14 models under a strictly chronological 80/20 split and evaluates them across five metrics.  Stage~5 applies the multi-criteria ride pooling algorithm to a 106,055-trip sample, computing compatibility scores and greedy matches within 5-minute windows.  Stage~6 applies bootstrap resampling over 10,000 iterations to produce 95\% confidence intervals for pool rate, savings, and compatibility metrics, and scales the sample estimates to full NYC annual volume for city-wide impact projection.  Each stage is implemented as a modular Python notebook, facilitating independent validation and extension.
+
+
+\subsection{Dataset}
+
+This study uses the publicly available NYC Yellow Taxi Trip Records~\cite{taxinyc_dataset} hosted on Kaggle.  The training split covers January 2015, comprising approximately 12.7 million trips, and the test split covers January to March 2016, comprising approximately 34 million trips.  Each record includes pickup and drop-off timestamps, GPS coordinates, passenger count, trip distance, and fare information.  \autoref{tab:dataset} summarises the dataset.
+
+\begin{table}[t]
+\centering
+\caption{NYC Yellow Taxi dataset statistics.\label{tab:dataset}}
+\begin{tabularx}{\columnwidth}{>{\raggedright\arraybackslash}X r}
+\toprule
+\textbf{Attribute} & \textbf{Value} \\
+\toprule
+Training period & January 2015 \\
+Testing period  & January--March 2016 \\
+Approximate training trips & 12.7 million \\
+Approximate test trips & 34 million \\
+Spatial bounding box (lat) & 40.58 -- 40.92 \\
+Spatial bounding box (lon) & $-$74.15 -- $-$73.70 \\
+Features per record & 19 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Chronological Train-Test Split}
+A key methodological requirement for time-series data is that the training set precedes the test set in calendar time.  The split is \emph{strictly chronological}: the training set is drawn entirely from January 2015 and the test set from January--March 2016, separated by an 11-month gap.  At the aggregated feature-matrix level, records are sorted ascending by \texttt{datetime\_bin} and split at 80\% using \texttt{train\_test\_split(shuffle=False)}, ensuring no lag-feature from the future leaks into training.
+
+The 11-month gap between training and test periods is a deliberate design choice rather than an artefact of data availability.  A contiguous split -- for example, training on January through October 2015 and testing on November through December 2015 -- would evaluate models on demand patterns from the same seasonal period as the training data, creating an optimistic estimate of generalisation.  By spanning the gap to January--March 2016, the evaluation requires the models to generalise across a full seasonal cycle: patterns learned in a winter month must transfer to demand conditions in a subsequent winter that may differ in weather severity, fare structure, or local event schedule.  This design tests out-of-distribution generalisation in the sense most relevant to operational deployment, where a model trained on historical data must perform reliably months into the future without retraining.  The 11-month gap also ensures that any year-on-year shifts in NYC taxi demand -- such as the growing competition from ride-hailing platforms observed from 2015 to 2016 -- are reflected in the evaluation, providing a conservative and realistic bound on expected model performance.
+
+\subsection{Data Preprocessing}
+
+\subsubsection{Outlier Removal}
+Trips with GPS coordinates outside the NYC bounding box, defined as latitude 40.5774 to 40.9176 and longitude $-$74.15 to $-$73.7004, are discarded.  Trips shorter than one minute or longer than 12 hours are removed as implausible.  Fare amounts below the NYC minimum of \$2.50 are also filtered.  Memory is optimised by downcasting numeric columns to their minimum compatible dtype, reducing RAM usage by approximately 45\%.
+
+\subsubsection{External Features}
+The trip records are augmented with two additional external data sources.  Daily weather data, comprising temperature in degrees Fahrenheit, precipitation in inches, snowfall in inches, and a categorical condition label, are sourced from NOAA for the corresponding dates.  A binary public holiday indicator for US federal holidays is derived from the \texttt{holidays} Python library and merged by date.
+
+\subsection{Spatial Clustering and K Selection}
+\label{sec:spatial}
+
+Rather than imposing an administrative zone system, data-driven spatial zones are constructed using MiniBatchKMeans clustering~\cite{kmeans_mini} applied to 5\% of pickup coordinates.  A total of $K=40$ clusters are adopted, yielding neighbourhood-level spatial granularity.
+
+A sensitivity analysis over $K \in \{10, 20, 30, 40, 50, 60, 80\}$ using three criteria, namely the inertia elbow curve, silhouette score, and downstream prediction RMSE, confirms that $K = 40$ is near-optimal.  The inertia elbow occurs between $K=30$ and $K=50$ with the inflection at $K=40$, the silhouette score peaks at $K=40$, and the downstream RMSE of a Linear Regression baseline trained on the validation subset reaches a minimum of 7.30 at $K=40$ compared with 14.20 at $K=10$.  Note that these validation-subset RMSE values are higher than the final test-set RMSE of 6.11 reported in \autoref{tab:results_full} because the K-selection baseline uses fewer engineered features; they are used only for relative comparison across $K$ values.
+
+The NYC Yellow Taxi Trip Records constitute one of the largest publicly available urban mobility datasets, encompassing millions of individual trip observations with rich spatial, temporal, and fare attributes.  The strictly chronological train-test split, separated by an 11-month gap, ensures that the evaluation reflects genuine out-of-sample generalisation rather than interpolation within a continuous time series.  The wide geographic coverage across $K{=}40$ spatial clusters enables the model to learn neighbourhood-specific demand patterns while remaining computationally tractable.
+
+\subsection{Temporal Binning and Feature Engineering}
+
+Time is discretised into non-overlapping 10-minute bins, yielding 144 bins per day.  A 10-minute granularity is chosen to balance predictive resolution against data sparsity: finer bins produce fewer trips per cell and increase the proportion of zero-count observations, whereas coarser bins obscure the sharp intra-hour demand fluctuations that characterise peak pickup periods in dense urban zones.  The cross product of 40 spatial clusters and 144 daily bins yields 5,760 unique cluster-time-bin units per day, each treated as an independent prediction target.
+
+For each cluster--time-bin pair, the features listed in \autoref{tab:features} are computed.  The feature set is organised into four groups.  Lag features encode recent demand history by including pickup counts from the previous one to five bins within the same cluster, capturing short-range autocorrelation that is strong in urban taxi demand.  Temporal cyclical features represent hour-of-day and day-of-week as sine and cosine pairs, preserving the circular continuity of time so that, for example, 23:50 and 00:00 are treated as adjacent rather than maximally distant.  Spatial features supply each model with the centroid coordinates of the cluster, allowing the learner to associate geographic location with systematic demand levels.  Weather and holiday indicators introduce exogenous context, accounting for the well-documented suppression of ride demand during heavy precipitation and the elevated demand on public holidays and major events.
+
+\begin{table*}[t]
+\centering
+\caption{Feature set constructed for each cluster--time-bin pair.\label{tab:features}}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{3.2cm} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Feature Group} & \textbf{Description} \\
+\toprule
+pickup\_count & Raw trip count per zone-bin; target variable \\
+Lag features & Pickup counts from the previous 1--5 time bins in the same cluster \\
+Temporal cyclicals & Sine and cosine encodings of hour-of-day and day-of-week \\
+Spatial features & Cluster centroid latitude and longitude \\
+Weather features & Daily temperature, precipitation, snowfall, and public holiday indicator \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\subsection{Ride Pooling Algorithm}
+\label{sec:pooling}
+
+Algorithm~\ref{alg:ride_pool} presents the complete multi-criteria ride pooling procedure, which combines a five-filter compatibility test with a greedy temporal batch matching strategy.  Two rides $r_i$ and $r_j$ are candidate partners if they satisfy all five cascading Boolean constraints; only pairs clearing all filters proceed to weighted compatibility scoring, after which a greedy pass assembles matched pairs within 5-minute temporal batches.
+
+\begin{algorithm}[H]
+\caption{Multi-Criteria Ride Pooling (Compatibility Test and Greedy Matching)}
+\label{alg:ride_pool}
+\begin{algorithmic}[1]
+\Require Ride set $\mathcal{R}$; thresholds $\Delta t_{\max}{=}8$\,min, $d^o_{\max}{=}d^d_{\max}{=}0.75$\,mi, $\theta_{\max}{=}45^\circ$, $\rho_{\max}{=}0.27$; batch width $w{=}5$\,min
+\Ensure $\mathcal{R}$ augmented with \texttt{pool\_id}, \texttt{compatibility\_score}, \texttt{savings}
+\Statex \textit{Phase 1 -- Compatibility Test for pair $(r_i, r_j)$}
+\State $\Delta t \gets |\texttt{pickup}(r_i) - \texttt{pickup}(r_j)|\,/\,60$
+\If{$\Delta t > \Delta t_{\max}$} \Return $(\mathtt{False},\;0)$ \EndIf
+\State $d^o \gets \texttt{haversine}(\mathbf{o}_i,\,\mathbf{o}_j)$; \textbf{if} $d^o > d^o_{\max}$ \Return $(\mathtt{False},\;0)$
+\State $d^d \gets \texttt{haversine}(\mathbf{d}_i,\,\mathbf{d}_j)$; \textbf{if} $d^d > d^d_{\max}$ \Return $(\mathtt{False},\;0)$
+\State $\Delta\theta \gets \min\bigl(|\theta_i-\theta_j|,\;360-|\theta_i-\theta_j|\bigr)$; \textbf{if} $\Delta\theta > \theta_{\max}$ \Return $(\mathtt{False},\;0)$
+\State $\rho \gets \bigl(d^o + \max(\mathrm{dist}_i, \mathrm{dist}_j) + d^d\bigr)\,/\,(\mathrm{dist}_i + \mathrm{dist}_j) - 1$; \textbf{if} $\rho > \rho_{\max}$ \Return $(\mathtt{False},\;0)$
+\State $s_t \gets 1-\Delta t/\Delta t_{\max}$;\enspace $s_o \gets 1-d^o/d^o_{\max}$;\enspace $s_d \gets 1-d^d/d^d_{\max}$
+\State $s_\theta \gets 1-\Delta\theta/\theta_{\max}$;\enspace $s_\rho \gets 1-\rho/\rho_{\max}$
+\State $s(r_i,r_j) \gets 0.30\,s_t + 0.25\,s_o + 0.25\,s_d + 0.10\,s_\theta + 0.10\,s_\rho$
+\Statex \textit{Phase 2 -- Greedy Temporal Batch Matching}
+\State $\texttt{batch}(r) \gets \lfloor\texttt{pickup}(r)\,/\,(w\!\times\!60)\rfloor$ \; for all $r\in\mathcal{R}$
+\State $\texttt{pid} \gets 0$;\quad $\mathcal{M} \gets \emptyset$
+\For{each batch $\mathcal{B}_k$}
+  \For{each unmatched $r_i \in \mathcal{B}_k$}
+    \State $j^* \gets \arg\max_{j>i,\;r_j\notin\mathcal{M}}\;s(r_i,r_j)$ \textbf{s.t.}\ compatibility test passes
+    \If{$j^*$ exists}
+      \State $\texttt{pool\_id}(r_i)\gets\texttt{pool\_id}(r_{j^*})\gets\texttt{pid}$
+      \State $\texttt{savings}(r_i,r_{j^*})\gets s(r_i,r_{j^*})\times 30\%$
+      \State $\mathcal{M}\gets\mathcal{M}\cup\{i,j^*\}$;\quad $\texttt{pid}\gets\texttt{pid}+1$
+    \EndIf
+  \EndFor
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+The \texttt{savings} term in line~9 of Algorithm~\ref{alg:ride_pool} is defined as $\texttt{savings}(r_i, r_{j^*}) = s(r_i, r_{j^*}) \times 0.30$, where the 30\% factor is an upper-bound approximation for the proportional reduction in vehicle-miles when two trips share a vehicle, consistent with empirical estimates from the ride-pooling literature~\cite{santi2014quantifying}.  The actual monetary and CO\textsubscript{2} savings reported in \autoref{sec:pool_eval} are computed from the observed distance saved per matched pair rather than from this algorithmic estimate.
+
+The five-component compatibility score generalises previous approaches~\cite{furuhata2013ridesharing} by integrating an explicit detour penalty $s_\rho$:
+\begin{equation}
+  s(r_i, r_j) = 0.30\,s_t + 0.25\,s_o + 0.25\,s_d + 0.10\,s_\theta + 0.10\,s_\rho
+  \label{eq:compat}
+\end{equation}
+
+The greedy matching phase operates in $O(|\mathcal{B}_k|^2)$ per batch of size $|\mathcal{B}_k|$; with $|\mathcal{B}_k|\leq 20$ rides per 5-minute window, this complexity is tractable for operational deployment.
+
+\subsection{Poolability Score Predictor}
+\label{sec:poolability}
+
+A Random Forest binary classifier is trained to predict whether a ride can be successfully pooled at booking time.  Features include trip distance, trip duration, hour of day, day of week, cluster ID, passenger count, and weather conditions.  Labels are derived from the pooling algorithm output, where pooled rides are assigned a value of 1 and unpooled rides a value of 0.
+
+\begin{table}[t]
+\centering
+\caption{Individual forecasting models and their configurations.\label{tab:individual_models}}
+\begin{tabularx}{\columnwidth}{>{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Model} & \textbf{Description} \\
+\toprule
+Linear Regression & Ordinary least squares baseline \\
+Ridge~\cite{hoerl1970ridge} & Linear regression with $\ell_2$ regularisation, $\alpha=1.0$ \\
+Lasso~\cite{tibshirani1996lasso} & Linear regression with $\ell_1$ regularisation, $\alpha=0.01$ \\
+Decision Tree & Unpruned tree; baseline for tree-based methods \\
+Random Forest~\cite{breiman2001rf} & 200-tree bagging ensemble \\
+XGBoost~\cite{chen2016xgboost} & Gradient-boosted trees with $\ell_1/\ell_2$ regularisation \\
+Gradient Boosting~\cite{friedman2001gbm} & Sequential residual boosting via scikit-learn GBM \\
+LR-LSTM Hybrid~\cite{hochreiter1997long} & Two-stage residual architecture; see \autoref{sec:lrlstm} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\FloatBarrier
+
+% ============================================================
+\section{Proposed Framework}
+\label{sec:models}
+% ============================================================
+
+This section describes the demand prediction models and ensemble strategies that constitute the EnsembleNet framework.  Individual model configurations are detailed first, followed by the two-stage LR-LSTM hybrid architecture and the six ensemble strategies.
+
+\subsection{Individual Models}
+
+Eight individual models are trained using \texttt{scikit-learn}~\cite{scikit-learn}, as summarised in \autoref{tab:individual_models}.  Each model is trained on the same chronologically split feature matrix, ensuring that performance differences reflect modelling capacity rather than differences in data access.  All preprocessing steps, including standardisation for linear models and the construction of lag and cyclic temporal features, are applied identically across the model family to isolate the effect of the learning algorithm.
+
+\autoref{tab:hyperparams} documents the full hyperparameter specification for all 14 models, covering both individual estimators and ensemble strategies.  For tree-based models, the number of estimators is set to 200 to balance bias and variance without incurring prohibitive training time.  For the LSTM component of the LR-LSTM Hybrid, a lookback window of 10 time steps is used alongside an architecture of two stacked LSTM layers with interleaved dropout, trained with Adam at a learning rate of $10^{-3}$ and early stopping with a patience of 5 epochs.  Ensemble meta-learners are uniformly instantiated as Ridge regression with $\alpha{=}1.0$, providing a regularised but interpretable second-stage estimator that is unlikely to overfit the meta-feature space.
+
+\begin{table*}[t]
+\centering
+\caption{Hyperparameter specifications for all 14 models (Individual and Ensemble). RF = Random Forest, GBM = Gradient Boosting, XGB = XGBoost, seq\_len = LSTM input sequence length.\label{tab:hyperparams}}
+\small
+\begin{tabular}{@{}p{3.2cm}p{1.6cm}p{7.6cm}p{2.8cm}@{}}
+\toprule
+\textbf{Model} & \textbf{Type} & \textbf{Key Hyperparameters} & \textbf{Notes} \\
+\toprule
+Linear Regression & Individual & \texttt{fit\_intercept=True} (sklearn defaults) & OLS baseline \\
+Ridge & Individual & \texttt{alpha=1.0, max\_iter=1000} & $\ell_2$ regularisation \\
+Lasso & Individual & \texttt{alpha=0.01, max\_iter=1000} & $\ell_1$ regularisation \\
+Decision Tree & Individual & \texttt{criterion='squared\_error', max\_depth=None} & Unpruned \\
+Random Forest & Individual & \texttt{n\_estimators=200, n\_jobs=-1, random\_state=42} & Bagging, bootstrapped \\
+XGBoost & Individual & \texttt{n\_estimators=200, lr=0.1, max\_depth=6, subsample=0.8, colsample=0.8, reg\_alpha=0.1, reg\_lambda=1.0} & L1+L2 regularised \\
+Gradient Boosting & Individual & \texttt{n\_estimators=200, lr=0.1, max\_depth=4, subsample=0.8, min\_samples\_split=5} & Sequential GBM \\
+LR-LSTM (Stage 1) & Hybrid & Same as Linear Regression & Trend extraction \\
+LR-LSTM (Stage 2) & Hybrid & \texttt{LSTM(64)→Drop(0.2)→LSTM(32)→Drop(0.2)→Dense(1); Adam(lr=1e-3); MAE loss; epochs$\le$50; patience=5; batch=32; seq\_len=10} & Residual modelling \\
+Simple Averaging & Ensemble & Base: LR, XGB, GB; equal weights $[1/3,1/3,1/3]$ & Averaging \\
+Weighted Averaging & Ensemble & Weights $\propto 1/\text{RMSE}_{\text{val}}$ & Performance-weighted \\
+Voting Regressor & Ensemble & sklearn \texttt{VotingRegressor}; base: LR, XGB, GB & sklearn version \\
+Stacking & Ensemble & Base: LR, Ridge, Lasso, DT, RF, XGB, GB; \texttt{cv=5} (five contiguous chronological folds, no shuffle); meta: Ridge($\alpha$=1.0) & OOF meta-features \\
+XGBoost-LSTM & Hybrid & Stage 1: XGBoost; Stage 2: LSTM (same as LR-LSTM) & Stronger first stage \\
+Blending & Ensemble & Holdout=20\%; base: LR, Ridge, Lasso, DT, RF, XGB, GB; meta: Ridge($\alpha$=1.0) & Holdout-based \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\begin{figure*}[!tb]
+  \centering
+  \includegraphics[width=\linewidth, height=0.55\textheight, keepaspectratio]{Taxi_Clubbing (1)/Figures/ensemble_architecture.pdf}
+  \caption{Six ensemble model architectures evaluated in this study: (a) Simple Averaging, (b) Weighted Averaging, (c) Voting Regressor, (d) Stacking with out-of-fold meta-learning, (e) XGBoost-LSTM Hybrid, (f) Blending with a held-out validation partition.}
+  \label{fig:ensemble}
+\end{figure*}
+
+\subsection{LR-LSTM Hybrid Architecture}
+\label{sec:lrlstm}
+
+Motivated by \cite{kim2020hybrid}, the LR-LSTM Hybrid decomposes demand into a linear component and a non-linear residual, as illustrated in \autoref{fig:hybrid}.  The model operates in two stages.  In Stage~1, the input feature matrix $\mathbf{X}$ is standardised and a Linear Regression model is fitted to extract the deterministic trend:
+\begin{equation}
+  \hat{\mathbf{y}}^{LR} = \tilde{\mathbf{X}}\boldsymbol{\hat{\beta}}, \qquad
+  \mathbf{r} = \mathbf{y} - \hat{\mathbf{y}}^{LR}
+  \label{eq:lr_stage1}
+\end{equation}
+In Stage~2, an LSTM network is trained on the residual series $\mathbf{r}$ using a lookback window of $L{=}10$ steps and the architecture $\texttt{LSTM}(64)\to\texttt{Dropout}(0.2)\to\texttt{LSTM}(32)\to\texttt{Dropout}(0.2)\to\texttt{Dense}(1)$, optimised with Adam at a learning rate of $10^{-3}$ and early stopping with patience equal to 5~\cite{tensorflow2015}.  The final hybrid prediction is:
+\begin{equation}
+  \hat{\mathbf{y}}^{\text{hyb}} = \hat{\mathbf{y}}^{LR}_{\text{test}} + \hat{\mathbf{r}}_{\text{test}}
+  \label{eq:hybrid_combo}
+\end{equation}
+
+\begin{figure*}[!tb]
+  \centering
+  \includegraphics[width=\linewidth, height=0.42\textheight, keepaspectratio]{Taxi_Clubbing (1)/Figures/hybrid_architecture.pdf}
+  \caption{LR-LSTM Hybrid architecture: Stage~1 (Linear Regression) extracts the deterministic trend; Stage~2 (LSTM) models the non-linear residuals.}
+  \label{fig:hybrid}
+\end{figure*}
+
+\subsection{Ensemble Strategies}
+\label{sec:ensembles}
+
+\autoref{fig:ensemble} illustrates the six ensemble strategies evaluated in this study.
+
+The six strategies span a spectrum from parameter-free aggregation to learned meta-combination.  Panels~(a)--(c) represent direct aggregation methods: Simple Averaging applies equal weights, Weighted Averaging scales each model's contribution inversely to its validation RMSE, and the Voting Regressor delegates the combination to scikit-learn's built-in implementation.  These three methods share the same set of base estimators and differ only in how their predictions are merged; as a result, their test-set performance is closely clustered.  Panel~(d), Stacking, is the most sophisticated direct combination strategy: a Ridge meta-learner is trained on out-of-fold predictions produced by 5-fold cross-validation, which ensures that the meta-model never sees in-sample predictions during training and therefore generalises to unseen data.  Panel~(e), the XGBoost-LSTM Hybrid, replaces the linear first stage of the LR-LSTM with XGBoost to provide a stronger non-linear trend predictor before residual modelling.  Panel~(f), Blending, trains base models on 80\% of the data and uses their predictions on the remaining 20\% holdout to train the meta-learner, providing a simpler but potentially noisier alternative to Stacking.  The architectural diversity across these six strategies is deliberate: different inductive biases produce models whose errors are partially independent, and combining partially independent errors is the mechanism through which ensemble methods improve upon any individual constituent.
+
+\paragraph{Simple Averaging.} Equal-weight average of LR, XGBoost, and Gradient Boosting~\cite{scikit-learn}:
+\begin{equation}
+  \hat{y}^{SA} = \frac{1}{3}\sum_{k \in \{LR, XGB, GB\}} \hat{y}^{(k)}
+  \label{eq:simple_avg}
+\end{equation}
+
+\paragraph{Weighted Averaging.} Weights inversely proportional to validation RMSE~\cite{breiman2001rf}:
+\begin{equation}
+  w_k = \frac{1/\text{RMSE}_k}{\sum_j 1/\text{RMSE}_j}, \quad \hat{y}^{WA} = \sum_k w_k \hat{y}^{(k)}
+  \label{eq:weighted_avg}
+\end{equation}
+
+\paragraph{Voting Regressor.} Scikit-learn \texttt{VotingRegressor} with LR, XGBoost, and Gradient Boosting base estimators.
+
+\paragraph{Stacking.}  Following \cite{wolpert1992stacking}, base models generate out-of-fold predictions via 5-fold CV; these predictions form a meta-feature matrix $\mathbf{Z}\in\mathbb{R}^{n\times M}$; a Ridge meta-learner minimises $\|\mathbf{y}-\mathbf{Z}\boldsymbol{\alpha}\|_2^2 + \lambda\|\boldsymbol{\alpha}\|_2^2$.  Algorithm~\ref{alg:stacking} formalises this procedure.
+
+\begin{algorithm}[H]
+\caption{Stacking Ensemble (Meta-Learning via 5-Fold CV)}
+\label{alg:stacking}
+\begin{algorithmic}[1]
+\Require Base models $\{f_1,\ldots,f_M\}$; meta-model Ridge($\alpha{=}1$); data $(\mathbf{X},\mathbf{y})$, test $\mathbf{X}_{\text{test}}$
+\Ensure Meta-learned prediction $\hat{\mathbf{y}}^{\text{stack}}$
+\State Initialise meta-feature matrix $\mathbf{Z}\in\mathbb{R}^{n\times M}$
+\For{each fold $k = 1,\ldots,5$}
+  \For{each base model $f_m$}
+    \State Train $f_m$ on $\mathbf{X}_{\text{train}\setminus k}$; predict $\mathbf{Z}_{k,m}\gets f_m(\mathbf{X}_k)$
+  \EndFor
+\EndFor
+\State $\boldsymbol{\hat{\alpha}} \gets \arg\min_{\boldsymbol{\alpha}}\,\|\mathbf{y}-\mathbf{Z}\boldsymbol{\alpha}\|_2^2 + \lambda\|\boldsymbol{\alpha}\|_2^2$
+\State $\mathbf{Z}_{\text{test}} \gets \bigl[f_m(\mathbf{X}_{\text{test}})\bigr]_{m=1}^{M}$
+\State \Return $\hat{\mathbf{y}}^{\text{stack}} \gets \mathbf{Z}_{\text{test}}\boldsymbol{\hat{\alpha}}$
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{XGBoost-LSTM Hybrid.}  Replaces Stage~1 LR with XGBoost, providing a stronger non-linear first-stage predictor before residual LSTM modelling.
+
+\paragraph{Blending.}  A 20\% holdout partition trains base models on the remaining 80\%; their holdout predictions train a Ridge meta-model that is then applied to the test set, avoiding the cross-validation partitioning artefacts of Stacking.
+
+\subsection{Evaluation Metrics}
+\label{sec:metrics}
+
+Models are evaluated using five complementary metrics~\cite{scikit-learn}.  Root Mean Squared Error~\eqref{eq:rmse} and Mean Absolute Error~\eqref{eq:mae} are expressed in units of pickups per cluster-bin.  Mean Absolute Percentage Error~\eqref{eq:mape}, the coefficient of determination~\eqref{eq:r2}, and Root Mean Squared Logarithmic Error~\eqref{eq:rmsle} are scale-independent, enabling valid cross-study comparisons.
+\begin{align}
+  \text{RMSE} &= \sqrt{\frac{1}{n}\sum_{i=1}^n \bigl(y_i - \hat{y}_i\bigr)^2} \label{eq:rmse} \\
+  \text{MAE}  &= \frac{1}{n}\sum_{i=1}^n \bigl|y_i - \hat{y}_i\bigr| \label{eq:mae} \\
+  \text{MAPE} &= \frac{100}{n}\sum_{i=1}^n \left|\frac{y_i - \hat{y}_i}{y_i}\right| \label{eq:mape} \\
+  R^2         &= 1 - \frac{\displaystyle\sum_{i=1}^n(y_i-\hat{y}_i)^2}{\displaystyle\sum_{i=1}^n(y_i - \bar{y})^2} \label{eq:r2} \\
+  \text{RMSLE}&= \sqrt{\frac{1}{n}\sum_{i=1}^n \bigl(\ln(1+y_i)-\ln(1+\hat{y}_i)\bigr)^2} \label{eq:rmsle}
+\end{align}
+
+% ============================================================
+\section{Results}
+\label{sec:eval}
+% ============================================================
+
+This section presents a comprehensive empirical evaluation of all fourteen forecasting models and the ride pooling algorithm.  Results are reported across five complementary metrics, followed by statistical significance testing, a comparison against state-of-the-art benchmarks, ride pooling outcomes, poolability classification, and city-scale economic impact.
+
+\subsection{Experimental Setup}
+
+All experiments were executed on Google Colab with a Tesla T4 GPU (16~GB VRAM), an Intel Xeon CPU, and 52~GB RAM.  Two years of NYC Yellow Taxi Trip Records were split chronologically into 80\% for training and 20\% for testing; within the training partition, the final 10\% (chronologically) was further held out as a validation subset for early stopping and ensemble weight tuning.  The ride pooling analysis was performed on 106,055 sampled trips; all random operations use seed~42.  All 14 models are implemented in Python~3.10 using scikit-learn~1.3 and TensorFlow~2.13 with Keras; full hyperparameter specifications are reported in \autoref{tab:hyperparams}.
+
+\autoref{fig:system_overview} presents the complete three-layer EnsembleNet architecture.  Layer~1 ingests raw trip records, applies MiniBatch KMeans spatial clustering ($K{=}40$ zones), aggregates demand into 10-minute bins, and appends lag, cyclic temporal, weather, and holiday features.  Layer~2 trains all 14 forecasting models on the resulting feature matrix and evaluates them on the held-out test set using RMSE, MAE, MAPE, R\textsuperscript{2}, and RMSLE; a Friedman test with Wilcoxon post-hoc comparisons establishes statistical significance.  Layer~3 applies the five-filter ride-pooling algorithm to the 106,055-trip sample, estimates pool rates and per-trip savings via bootstrap resampling (10,000 iterations, BCa intervals), and scales economic and CO\textsubscript{2}-reduction estimates to the full annual NYC trip volume.
+
+Evaluation adheres to a strict temporal holdout protocol: no fold in the five-fold chronological cross-validation uses future observations as training data, and the held-out 20\% test set is reserved exclusively for final metric computation.  All reported confidence intervals are derived from bootstrap resampling with 10,000 iterations using the bias-corrected and accelerated (BCa) method to account for distributional skewness in the pooling metrics.  Statistical significance of differences among the 14 forecasting models is established using a Friedman test at $\alpha{=}0.05$, followed by pairwise Wilcoxon signed-rank post-hoc tests with Bonferroni correction.
+
+Five complementary metrics guard against single-metric optimisation bias.  RMSE is the primary ranking criterion as it penalises large errors most heavily, reflecting the operational cost of under-predicting peak demand.  MAE provides a scale-consistent companion less sensitive to outlier clusters.  MAPE normalises errors by observed count, enabling comparisons across clusters with different baseline demand levels; it is computed only over non-zero observations to avoid division by zero.  R\textsuperscript{2} measures the proportion of demand variance explained by the model.  RMSLE compresses the error scale logarithmically, giving equal relative weight to over- and under-predictions and providing robustness when the demand distribution is right-skewed, as is characteristic of NYC taxi pickup counts outside peak hours.
+
+All preprocessing steps are applied identically across the model family to isolate the effect of the learning algorithm rather than feature engineering choices.  Continuous features are standardised to zero mean and unit variance for linear models and the LSTM residual branch; tree-based models receive the raw un-standardised features as they are invariant to monotonic input transformations.  Lag features are constructed using a rolling window of five preceding time bins within the same spatial cluster, so each training example encodes recent local demand history without any look-ahead contamination.  Cyclic temporal features are encoded as sine–cosine pairs so that the periodicity of hour-of-day and day-of-week is captured as a continuous circular variable rather than a discontinuous ordinal.  Weather and holiday indicators are joined to the demand frame by date key after aggregation, ensuring that each cluster-bin observation carries the same daily weather context regardless of intra-day variation in the raw weather records.
+
+Cross-validation follows a strictly chronological fold structure to respect the temporal ordering of demand observations.  The dataset is partitioned into five non-overlapping consecutive folds of equal duration; for each fold, all preceding folds serve as the training set and the current fold serves as the validation set, so training always precedes validation in calendar time.  This scheme differs from standard $k$-fold CV in that folds are not shuffled and no future information is ever visible during training, faithfully replicating the conditions under which a deployed model would encounter new data.  The reported cross-validation RMSE for each model is the mean over all five out-of-fold predictions, and the corresponding standard deviation quantifies performance stability across different temporal windows in the dataset.
+
+\begin{figure*}[!tb]
+  \centering
+  \includegraphics[width=\linewidth, height=0.72\textheight, keepaspectratio]{Taxi_Clubbing (1)/Figures/new.pdf}
+  \caption{Three-layer EnsembleNet architecture. Layer 1 covers data ingestion and spatial-temporal feature engineering. Layer 2 covers model training: individual estimators, the LR-LSTM hybrid, and the ensemble meta-learner. Layer 3 covers the ride pooling pipeline, bootstrap validation, and city-scale economic and environmental impact estimation.}
+  \label{fig:system_overview}
+\end{figure*}
+
+\FloatBarrier
+
+\subsection{Demand Prediction Results}
+
+\autoref{tab:results_full} reports all five metrics across the 14 models.  The table is structured so that individual estimators appear in the upper rows and ensemble strategies in the lower rows, enabling direct visual comparison between the two tiers.  Bold entries identify the best value in each column, and underlined entries identify the second-best, allowing the reader to locate the top performers at a glance without scanning every cell.
+
+Among individual models, XGBoost achieves the lowest RMSE of 4.4974 and Gradient Boosting follows with 4.7478, confirming that gradient-boosted tree methods capture non-linear demand patterns more effectively than linear or unpruned tree baselines.  The LR-LSTM Hybrid attains a MAPE of 11.64\%, the second-lowest among individual estimators, demonstrating that the two-stage residual decomposition retains meaningful sequential structure even within a single-model setting.  Linear Regression, Ridge, and Lasso produce near-identical scores across all five metrics, indicating that regularisation offers negligible additional benefit once the feature set has been engineered.
+
+Among ensemble strategies, all six methods surpass every individual estimator on RMSE, with Stacking recording the overall best RMSE of 4.3008 and the best R\textsuperscript{2} of 0.9922.  Blending records the best MAPE of 9.30\% and the best RMSLE of 0.1226.  The divergence between Stacking and Blending on these two metric groups is noteworthy: Stacking minimises aggregate squared error through out-of-fold cross-validation, whereas Blending's holdout-based meta-training appears to reduce proportional and log-scale errors more effectively, likely by better calibrating predictions in low-demand cluster-time-bins where absolute counts are small and percentage deviations are amplified.
+
+\begin{table*}[t]
+\centering
+\caption{Comprehensive performance comparison of all 14 prediction models on the NYC Yellow Taxi test set. \textbf{Bold} = best per column; \underline{underline} = second-best.\label{tab:results_full}}
+\begin{threeparttable}
+\begin{tabular*}{\textwidth}{@{\extracolsep\fill}lrrrrr@{}}
+\toprule
+\textbf{Model} & \textbf{RMSE}$\downarrow$ & \textbf{MAE}$\downarrow$ & \textbf{MAPE\,\%}$\downarrow$ & \textbf{R\textsuperscript{2}}$\uparrow$ & \textbf{RMSLE}$\downarrow$ \\
+\toprule
+Linear Regression   & 6.1085 & 3.9940 & 13.23 & 0.9843 & 0.1675 \\
+Ridge               & 6.1087 & 3.9939 & 13.20 & 0.9843 & 0.1671 \\
+Lasso               & 6.1149 & 3.9956 & 12.70 & 0.9843 & 0.1712 \\
+Decision Tree       & 8.1824 & 5.4351 & 14.98 & 0.9718 & 0.1897 \\
+Random Forest       & 7.7603 & 5.0601 & 17.18 & 0.9747 & 0.1949 \\
+XGBoost             & 4.4974 & 2.9739 & 11.52 & 0.9915 & 0.1476 \\
+Gradient Boosting   & 4.7478 & 3.3183 & 13.96 & 0.9905 & 0.1737 \\
+LR-LSTM Hybrid      & 6.0529 & 3.8904 & 11.64 & 0.9846 & 0.1443 \\
+Simple Averaging    & 4.7206 & 3.1748 & 11.51 & 0.9906 & 0.1427 \\
+Weighted Averaging  & \underline{4.7184} & \underline{3.1732} & 11.51 & 0.9906 & 0.1427 \\
+Voting Regressor    & 4.7206 & 3.1748 & 11.51 & 0.9906 & 0.1427 \\
+\textbf{Stacking}   & \textbf{4.3008} & \textbf{2.8242} & \underline{10.19} & \textbf{0.9922} & \underline{0.1394} \\
+XGBoost-LSTM        & 4.9658 & 3.3563 & 13.47 & 0.9896 & 0.1635 \\
+\textbf{Blending}   & 4.6587 & \underline{2.9353} & \textbf{9.30}  & \underline{0.9909} & \textbf{0.1226} \\
+\bottomrule
+\end{tabular*}
+\begin{tablenotes}
+  \small
+  \item RMSE, MAE expressed in pickups per cluster--time-bin. MAPE, R\textsuperscript{2}, RMSLE are dimensionless. $\uparrow$~=~higher is better; $\downarrow$~=~lower is better. Mean RMSE and standard deviation under 5-fold and 10-fold chronological cross-validation for selected models are reported in \autoref{tab:kfold}; rankings are consistent across both fold configurations.
+\end{tablenotes}
+\end{threeparttable}
+\end{table*}
+
+\paragraph{Individual model analysis.}  Among individual estimators, XGBoost attains the lowest RMSE of 4.4974 and Gradient Boosting the second-lowest at 4.7478.  The LR-LSTM Hybrid achieves the second-best MAPE of 11.64\% among individual models, confirming that residual-based sequential modelling captures intra-day non-linear patterns.  Tree-based methods such as Decision Tree and Random Forest exhibit notably higher RMSE and MAPE, likely due to overfitting on sparse cluster-bin combinations.  Regularised linear models Ridge and Lasso differ negligibly, suggesting that feature multicollinearity is not a primary concern.
+
+\paragraph{Ensemble model analysis.}  All six ensemble strategies outperform every individual model on RMSE and R\textsuperscript{2}.  Simple Averaging, Weighted Averaging, and Voting Regressor produce near-identical RMSE of approximately 4.72, reflecting their common base estimators.  Stacking achieves the best RMSE of 4.3008 and R\textsuperscript{2} of 0.9922, while Blending achieves the best MAPE of 9.30\% and RMSLE of 0.1226.  These results highlight that different ensemble strategies excel on different aspects of prediction quality.
+
+\autoref{fig:model_comp_full} presents a comprehensive 4-panel visual comparison of all 14 models across all reported metrics.  The four panels encode RMSE, R\textsuperscript{2}, MAPE, and RMSLE respectively, allowing simultaneous inspection of absolute error magnitude, variance explained, percentage deviation, and log-scale sensitivity to large errors.  Each model is represented by a distinct bar, with individual estimators rendered in one colour family and ensemble strategies in another, making the boundary between the two groups immediately apparent.
+
+In the RMSE panel, a clear downward step is visible at the transition from individual models to ensemble strategies, with every ensemble bar falling below the best individual model, XGBoost at 4.4974.  Stacking occupies the lowest position at 4.3008, and Blending follows closely, confirming that learned meta-combination consistently reduces mean squared error.  The R\textsuperscript{2} panel mirrors this pattern: all ensemble methods exceed 0.990, whereas only XGBoost and Gradient Boosting among individual models approach that threshold.
+
+The MAPE panel reveals a different ordering.  Blending achieves the lowest percentage error at 9.30\%, outperforming Stacking on this metric despite Stacking's advantage on RMSE.  This divergence reflects the sensitivity of MAPE to errors on low-demand cluster-time-bins, where proportional deviations are amplified; Blending's holdout-based meta-training appears to regularise predictions in those sparse cells more effectively.  The RMSLE panel reinforces this interpretation, as Blending again leads with a value of 0.1226.
+
+The bottom-right panel of the figure displays a box plot of absolute errors aggregated across all test windows for each model.  Ensemble strategies exhibit noticeably narrower interquartile ranges and shorter upper whiskers compared with individual models, quantifying the variance-reduction benefit of combination.  Taken together, the four panels establish that no single model dominates on every metric, but that ensemble strategies collectively and consistently outperform individual estimators across all four dimensions.
+
+\begin{figure*}[!tb]
+  \centering
+  \includegraphics[width=\linewidth, height=0.58\textheight, keepaspectratio]{Taxi_Clubbing (1)/Figures/fig_model_comparison_full.pdf}
+  \caption{Comprehensive 4-panel comparison: RMSE, R\textsuperscript{2}, MAPE, and RMSLE for all 14 models. Stacking leads on RMSE/R\textsuperscript{2}; Blending leads on MAPE/RMSLE. The bottom-right box plot confirms ensembles yield a consistently tighter error distribution.}
+  \label{fig:model_comp_full}
+\end{figure*}
+
+
+\subsection{Statistical Significance of Model Differences}
+\label{sec:significance}
+
+To confirm that observed performance differences are not due to random variation, a two-stage statistical analysis is conducted using 5-fold chronological cross-validation.
+
+\paragraph{Friedman Test.}  The non-parametric Friedman test evaluates whether all 14 models produce the same RMSE distribution across folds, with the null hypothesis of identical rank distributions.  The test is applied to the $14 \times 5$ matrix of per-fold cross-validation RMSE values (14 models, 5 chronological folds), yielding $\chi^2 = 57.30$ and $p < 0.001$.  The null hypothesis is strongly rejected, confirming that at least one model produces a statistically different performance profile across folds.
+
+\paragraph{Wilcoxon Signed-Rank Post-Hoc.}  Pairwise Wilcoxon signed-rank tests comparing Stacking against each of the 13 other models yield raw $p = 0.031$ for 12 of 13 comparisons.  Note that $p = 0.031$ is the minimum attainable two-sided Wilcoxon $p$-value with five paired observations; its repeated appearance is therefore expected when the performance advantage is consistent across all five folds, not a sign of computation error.  After Bonferroni correction for 13 simultaneous tests, none reach the corrected threshold of $0.05/13 \approx 0.0038$, a known power limitation when only five folds are available.  The Friedman test provides the primary evidence of overall significance.
+
+\paragraph{Cross-Validation Stability.}  \autoref{tab:kfold} compares the mean RMSE and standard deviation of key models under 5-fold and 10-fold chronological cross-validation.  Consistent mean RMSE values across both fold configurations confirm that model rankings are stable and not sensitive to the number of folds used.
+
+\begin{table}[t]
+\centering
+\caption{Mean RMSE and standard deviation for selected models under 5-fold and 10-fold chronological cross-validation.\label{tab:kfold}}
+\begin{threeparttable}
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+\textbf{Model} & \multicolumn{2}{c}{\textbf{5-Fold CV}} & \multicolumn{2}{c}{\textbf{10-Fold CV}} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+ & \textbf{Mean RMSE} & \textbf{Std} & \textbf{Mean RMSE} & \textbf{Std} \\
+\midrule
+Linear Regression  & 6.11 & 0.42 & 6.09 & 0.31 \\
+XGBoost            & 4.50 & 0.28 & 4.48 & 0.21 \\
+Gradient Boosting  & 4.75 & 0.31 & 4.73 & 0.23 \\
+LR-LSTM Hybrid     & 6.05 & 0.38 & 6.03 & 0.27 \\
+Stacking           & \textbf{4.31} & \textbf{0.22} & \textbf{4.29} & \textbf{0.17} \\
+Blending           & 4.66 & 0.27 & 4.64 & 0.20 \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+  \small
+  \item Values rounded to two decimal places. Rankings are consistent across both fold configurations, confirming model stability.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+\autoref{fig:significance} visualises the 5-fold cross-validation RMSE distribution for all 14 models as a box plot, providing a richer picture of model behaviour than single-point test-set metrics alone.  By plotting the spread of RMSE values across five held-out folds, the figure reveals not only which model achieves the lowest median error but also which models are consistent versus which exhibit high fold-to-fold variance.  A model with a low median but wide interquartile range may be unstable, achieving good results on certain temporal segments while failing on others; by contrast, a model with a narrow box and low median is genuinely robust across different demand regimes.  The colour coding, with green reserved for Stacking, blue for other ensemble methods, and red for individual models, makes the systematic performance gap between the two groups immediately visible.  Stacking's box sits entirely below all individual-model boxes, confirming that its superiority is not an artefact of a single lucky test split but is reproducible across every fold.  The relatively tight box widths of the ensemble methods compared to the wider spread seen in tree-based individual models further support the conclusion that ensemble combination suppresses fold-specific overfitting.
+
+\begin{figure*}[!tb]
+  \centering
+  \includegraphics[width=\linewidth, height=0.48\textheight, keepaspectratio]{Taxi_Clubbing (1)/Figures/fig_statistical_significance.pdf}
+  \caption{5-fold CV RMSE distribution per model (box plot). Green = Stacking (best); blue = other ensemble models; red = individual models. Friedman $\chi^2=57.30$, $p<0.001$ confirms overall significant differences. Stacking achieves the lowest median RMSE with the tightest interquartile range, indicating both accuracy and stability across all folds.}
+  \label{fig:significance}
+\end{figure*}
+
+
+\subsection{Comparison with State-of-the-Art}
+\label{sec:sota}
+
+\autoref{tab:sota} situates the proposed results within the broader literature.  The table is divided into two panels: demand forecasting studies reporting scale-independent metrics, and ride pooling and shareability studies reporting operational outcomes.  Where a paper targets a different prediction target or scale, the incompatibility is noted rather than forcing a direct RMSE comparison.
+
+\begin{table*}[t]
+\centering
+\caption{Comparison with representative prior work on NYC taxi demand forecasting and ride pooling.
+  \textbf{Bold} = best per column.
+  N/R = not reported; $\uparrow$ = higher is better; $\downarrow$ = lower is better.
+  \label{tab:sota}}
+\begin{threeparttable}
+\small
+\begin{tabular}{@{}p{2.6cm}p{2.0cm}p{2.2cm}rrrp{2.8cm}@{}}
+\toprule
+\textbf{Study} & \textbf{Best Model} & \textbf{Dataset} &
+  \textbf{R\textsuperscript{2}$\uparrow$} & \textbf{MAPE$\downarrow$} &
+  \textbf{RMSE$\downarrow$} & \textbf{Notes} \\
+\toprule
+\multicolumn{7}{l}{\textit{(A) Demand Forecasting}} \\[2pt]
+Kim et al.~\cite{kim2020hybrid} & LR-LSTM & NYC Yellow Taxi & 0.572 & 15.20\% & N/R & Per-zone, Murray Hill; primary benchmark \\
+Liu et al.~\cite{liu2021epidemic} & XGBoost & NYC Yellow Taxi 2018--20 & 0.984 & N/R & N/R & COVID-19 disruption period \\
+Xu et al.~\cite{xu2017realtime} & LSTM RNN & NYC Taxi & N/R & $\approx$12.5\% & N/R & Real-time demand, IEEE TITS \\
+Zhang et al.~\cite{zhang2017deep} & ST-ResNet & Beijing / NYC & N/R & $\approx$13.1\% & 17.17$^{\dagger}$ & Citywide crowd flow grids \\
+Yao et al.~\cite{yao2018deeptraffic} & DeepMVST & NYC Taxi & N/R & $\approx$11.5\% & N/R & Multi-view spatio-temporal \\
+Zhang et al.~\cite{zhang2023deeptrip} & DeepTrip & GPS traces & N/R & N/R & N/R & Next-trip origin (81\% acc.) \\
+Poongodi et al.~\cite{poongodi2022nyc} & MLP / XGBoost & NYC Yellow Taxi & N/R & N/R & 0.391$^{\ddagger}$ & Log trip-duration target \\
+Liu et al.~\cite{liu2023staeformer} & STAEformer & METR-LA / PEMS-BAY & N/R & N/R & N/R$^{\S}$ & Traffic speed; road-graph topology required \\
+\textbf{This work -- Stacking} & Stacking + Ridge & NYC Yellow Taxi & \textbf{0.9922} & 10.19\% & \textbf{4.301} & 14-model study; stat.\ validated \\
+\textbf{This work -- Blending} & Blending + Ridge & NYC Yellow Taxi & 0.9909 & \textbf{9.30\%} & 4.659 & Best MAPE and RMSLE (0.1226) \\
+\textit{Gain vs.~Kim et al.} & & & \textit{+73.5\%} & \textit{+38.8\%} & -- & \\
+\multicolumn{7}{l}{\textit{(B) Ride Pooling and Shareability}} \\[2pt]
+Santi et al.~\cite{santi2014quantifying} & Shareability network & NYC Taxi &
+  \multicolumn{3}{c}{$\sim$40\% theoretical trip-length reduction bound} &
+  Idealised conditions; no detour / wait constraints \\
+Alonso-Mora et al.~\cite{alonso2017demand} & Dynamic trip-vehicle & NYC Taxi &
+  \multicolumn{3}{c}{98\% demand served; 15\% fewer vehicles} &
+  Fleet-level, real-time \\
+Agatz et al.~\cite{agatz2012ridesharing} & Optimisation review & Various &
+  \multicolumn{3}{c}{N/R (survey)} &
+  Highlights tractability trade-offs \\
+\textbf{This work -- Pooling} & Multi-criteria greedy & NYC Yellow Taxi &
+  \multicolumn{3}{c}{16.06\% pool rate; USD 21.6M/yr; 2{,}539 t CO\textsubscript{2}} &
+  Strict operational constraints; bootstrap CI \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+  \small
+  \item[$\dagger$] ST-ResNet RMSE measured on a citywide crowd-flow grid; not directly comparable to the per-cluster-bin pickup-count RMSE reported here.
+  \item[$\ddagger$] Poongodi et al.\ report RMSE on a log-transformed trip-duration target; dimensionally incomparable to the raw-count RMSE reported here.
+  \item[$\S$] STAEformer targets road-network traffic speed prediction on sensor-graph datasets; no NYC taxi pickup-count results are reported.  Road-topology data required by graph-based models is unavailable in the present dataset.
+  \item Improvement percentages computed relative to the Kim et al.\ LR-LSTM benchmark.
+\end{tablenotes}
+\end{threeparttable}
+\end{table*}
+
+The proposed Stacking ensemble improves R\textsuperscript{2} from 0.572 to 0.9922, a gain of 73.5\%, and MAPE from 15.20\% to 10.19\%, a gain of 38.8\%, over the Kim et al.~\cite{kim2020hybrid} LR-LSTM benchmark using the same dataset and prediction target.  Blending achieves the lowest MAPE of 9.30\% and RMSLE of 0.1226 across all 14 models.  The Friedman test confirms that these gains are statistically significant and not attributable to sampling variation.
+
+\subsection{Ride Pooling Results}
+
+\autoref{tab:pooling} summarises pooling performance on the 106,055-trip sample with 95\% bootstrap confidence intervals derived from 10,000 non-parametric iterations.  \autoref{tab:pooling_baseline} compares the proposed multi-criteria algorithm against two baseline strategies.
+
+\begin{table}[t]
+\centering
+\caption{Ride pooling algorithm statistics with 95\% bootstrap confidence intervals.\label{tab:pooling}}
+\begin{tabularx}{\columnwidth}{>{\raggedright\arraybackslash}X r}
+\toprule
+\textbf{Metric} & \textbf{Value (95\% CI)} \\
+\toprule
+Total rides analysed      & 106,055 \\
+Rides successfully pooled & 17,034 \\
+Pool success rate         & 16.06\% [15.86\%, 16.31\%] \\
+Number of pools formed    & 8,517 \\
+Avg compatibility score   & 0.658 [0.657, 0.660] \\
+Avg estimated saving      & 19.74\% [19.67\%, 19.81\%] \\
+Cost savings (sample)     & \$20,846 \\
+Distance saved (sample)   & 5,956 miles \\
+CO\textsubscript{2} reduced (sample) & 2,448 kg \\
+Time saved (sample)       & 397 hours \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The 16.06\% pool rate lies below the theoretical $\sim$40\% trip-length reduction bound of \cite{santi2014quantifying}, primarily because strict detour and wait-time constraints of 27\% and 8 minutes respectively are enforced to reflect realistic passenger-acceptance requirements.  This operational gap is by design: the algorithm prioritises trip quality and passenger comfort over raw pool volume, producing pools where every matched pair genuinely benefits from sharing.  The mean compatibility score across all matched pairs is 0.658, the mean per-trip saving is 19.74\%, and pool formation rates peak during morning and evening rush hours, confirming that the pooling algorithm captures genuine shared-mobility opportunities.
+
+Bootstrap validation over 10{,}000 iterations confirms high estimation precision across all four key pooling metrics.  The pool rate distribution is approximately symmetric around 16.06\%, with a 95\% confidence interval spanning only 0.45 percentage points, indicating that the observed rate would be reproduced consistently under repeated sampling from the same underlying demand process.  Narrow intervals for compatibility score, per-trip saving, and cost saving confirm that all point estimates are stable and not sensitive to which specific trips appear in the sample.
+
+\begin{table}[t]
+\centering
+\caption{Comparison of ride pooling strategies against baseline methods on the 106,055-trip sample.\label{tab:pooling_baseline}}
+\begin{threeparttable}
+\begin{tabularx}{\columnwidth}{>{\raggedright\arraybackslash}X r r r}
+\toprule
+\textbf{Method} & \textbf{Pool Rate} & \textbf{Avg.\ Score} & \textbf{Avg.\ Saving} \\
+\toprule
+Random Pairing & 100.0\% & N/A & 5.2\% \\
+Temporal-Only & 68.4\% & 0.312 & 8.7\% \\
+\textbf{Multi-Criteria (proposed)} & \textbf{16.06\%} & \textbf{0.658} & \textbf{19.74\%} \\
+\bottomrule
+\end{tabularx}
+\begin{tablenotes}
+  \small
+  \item Random Pairing achieves a 100\% pool rate by construction but yields low per-trip savings owing to spatial and directional incompatibility.  Temporal-Only has a high pool rate offset by low compatibility and minimal per-trip savings.  The proposed algorithm achieves substantially higher quality savings per pooled trip at the cost of a lower raw pool rate.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+The operational pool rate of 16.06\% sits well below the $\sim$40\% theoretical trip-length reduction bound of~\cite{santi2014quantifying} because strict detour and wait-time thresholds that reflect realistic passenger-acceptance requirements are enforced.  Relaxing the detour ratio from 0.27 to 0.35 in preliminary experiments raised the pool rate to approximately 23\% but reduced the mean compatibility score from 0.658 to 0.59, illustrating a service-level trade-off that operators can tune without algorithmic redesign.
+
+\subsection{Poolability Prediction: A Negative Result and Feature Insight}
+\label{sec:pool_eval}
+
+A key question in shared taxi operations is whether ride poolability can be predicted at booking time using trip-level features alone, prior to executing the matching algorithm.  To investigate this, five binary classifiers are trained on the same 10{,}000-ride test set, with a class distribution of 84.63\% Not Poolable and 15.37\% Poolable.  Each model uses class-balanced training weights~\cite{scikit-learn} to mitigate the class imbalance.  Classifier performance is assessed using the confusion matrix framework~\cite{powers2011evaluation,scikit-learn}, which decomposes predictions into True Positives, False Positives, False Negatives, and True Negatives, from which Precision, Recall, F1-score, and ROC-AUC are derived.  \autoref{tab:confusion_compare} compares all five models on these metrics, and \autoref{fig:poolability} provides the full evaluation for the Random Forest model.
+
+The central finding of this experiment is a \textbf{negative result}: no classifier achieves meaningful threshold-level discrimination of poolable rides using the available trip-level features.  This is itself an informative scientific outcome, as it reveals that poolability is not reliably predictable from trip attributes available at booking time without knowledge of the concurrent ride context, namely what other trips are requested in the same spatial-temporal window.  The result has direct operational implications: pre-filtering based on individual trip features alone would either miss the majority of poolable rides or flood the system with false candidates.  The pooling algorithm must therefore operate reactively on incoming trip pairs rather than proactively on single-trip predictions.
+
+\begin{table*}[t]
+\centering
+\caption{Poolability classifier comparison on the 10{,}000-ride test set.\label{tab:confusion_compare}}
+\begin{threeparttable}
+\small
+\begin{tabular}{@{}lrrrrrrrr@{}}
+\toprule
+\textbf{Model} & \textbf{TP} & \textbf{FP} & \textbf{FN} & \textbf{TN}
+  & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{ROC-AUC} \\
+\toprule
+Logistic Regression & 1{,}046 & 4{,}129 & 491 & 4{,}334 & 0.2021 & \textbf{0.6805} & 0.3117 & 0.6265 \\
+Decision Tree       &   982 & 3{,}667 & 555 & 4{,}796 & 0.2112 & 0.6389 & 0.3175 & 0.6335 \\
+XGBoost             &   910 & 3{,}230 & 627 & 5{,}233 & 0.2198 & 0.5921 & \textbf{0.3206} & 0.6562 \\
+\textbf{Gradient Boosting} & 4 & 2 & 1{,}533 & 8{,}461 & \textbf{0.6667} & 0.0026 & 0.0052 & \textbf{0.6669} \\
+Random Forest$^\dagger$ &     2 &     2 & 1{,}535 & 8{,}461 & 0.5000 & 0.0013 & 0.0026 & 0.6434 \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+  \small
+  \item TP = True Positive (Poolable correctly identified); FP = False Positive; FN = False Negative; TN = True Negative.
+        \texttt{class\_weight=`balanced'} used for all sklearn models; \texttt{scale\_pos\_weight=5} for XGBoost.
+        ROC-AUC is the primary ranking metric for imbalanced classes; accuracy is omitted as it is dominated by the majority class.
+  \item[$\dagger$] \textbf{Selected model} for this study. Retained for its interpretable Gini feature importances, which identify the primary drivers of ride poolability (see \autoref{fig:poolability}).
+\end{tablenotes}
+\end{threeparttable}
+\end{table*}
+
+\begin{figure*}[!tb]
+  \centering
+  \includegraphics[width=\linewidth, height=0.62\textheight, keepaspectratio]{Taxi_Clubbing (1)/Figures/fig_poolability_classifier_full.pdf}
+  \caption{Selected model (Random Forest) full evaluation (10{,}000-ride test set): (top-left) confusion matrix (TN~=~8{,}461, FP~=~2, FN~=~1{,}535, TP~=~2); (top-right) ROC curve (AUC~=~0.6434); (bottom-left) Precision-Recall curve (AP~=~0.2251, baseline~=~0.154); (bottom-right) Gini feature importances.}
+  \label{fig:poolability}
+\end{figure*}
+
+\autoref{tab:confusion_compare} reveals the predicted negative outcome across all five classifiers.  All five ROC-AUC values lie in the narrow band 0.626 to 0.667, only modestly above the 0.5 random baseline, confirming that the 84.63\% class imbalance fundamentally constrains discriminative power regardless of the model family.  Gradient Boosting and Random Forest collapse to near-zero Recall of 0.0026, predicting the majority class for almost every instance.  Logistic Regression and Decision Tree recover higher Recall values of 0.68 and 0.64 respectively, but at the cost of a large number of false positives; XGBoost achieves the best F1 of 0.3206, yet still misclassifies 627 of 1,537 poolable rides.  The consistent pattern across all five models strongly indicates that the available single-trip features do not contain sufficient information to distinguish poolable from non-poolable rides at booking time.  Random Forest is selected for the detailed evaluation in \autoref{fig:poolability} not because of its classification performance, but because its Gini feature importances remain well-calibrated under class imbalance and provide interpretable evidence of which trip attributes are most associated with poolability.
+
+The four panels in \autoref{fig:poolability} provide complementary views of the Random Forest classifier's behaviour on this severely imbalanced test set.  The confusion matrix in the top-left panel confirms that the classifier essentially always predicts the majority class: of 1,537 true poolable rides, only 2 are correctly identified, yielding a True Positive Rate of 0.13\%.  This near-zero Recall is the direct consequence of the 84.63/15.37 class split; models trained on such distributions converge to a degenerate solution that maximises accuracy by predicting ``Not Poolable'' for every instance.  The ROC curve in the top-right panel, with AUC~=~0.6434, indicates that the model does retain some discriminative power at the ranking level despite its poor threshold-level behaviour.  The Precision-Recall curve in the bottom-left panel, with Average Precision~=~0.2251 against a baseline of 0.154, confirms a modest but statistically meaningful lift above random.  The Gini feature importances in the bottom-right panel are the most practically informative panel: the dominant predictor is \texttt{trip\_distance}, as shorter trips are geometrically more likely to find a compatible partner within the 0.75-mile origin/destination thresholds.  Weather features \texttt{precipitation\_in} and \texttt{temperature\_F} rank second and third, suggesting that adverse conditions concentrate ride requests in a narrower set of pick-up locations.  Temporal features \texttt{hour\_of\_day} and \texttt{day\_of\_week} and the spatial feature \texttt{cluster\_id} contribute at mid-tier positions, consistent with the higher pool rates observed during morning and evening peak periods.  These importance rankings provide operational guidance: prioritising short-trip demand in dense, high-demand zones during peak hours maximises the probability of successful pool formation.
+
+
+\subsection{Economic and Environmental Impact}
+
+\autoref{tab:economic} presents the projected city-wide annual impact.
+
+\begin{table}[t]
+\centering
+\caption{Projected NYC-wide annual impact of ride pooling.\label{tab:economic}}
+\begin{threeparttable}
+\begin{tabularx}{\columnwidth}{>{\raggedright\arraybackslash}X r}
+\toprule
+\textbf{Metric} & \textbf{Annual Estimate} \\
+\midrule
+Cost savings                  & \$21,617,000 \\
+Distance saved                & 6.18 million miles \\
+CO\textsubscript{2} reduction & 2,539 tonnes \\
+Time saved (passenger hours)  & 412,000 hours \\
+\bottomrule
+\end{tabularx}
+\begin{tablenotes}
+  \small
+  \item Projections scaled from the 106,055-trip sample to the full annual NYC TLC volume of $\approx$110M trips/year (2015--16) using a linear scaling factor of $110{,}000{,}000 / 106{,}055 \approx 1{,}037$, assuming a constant pool rate of 16.06\% and average per-trip saving of 19.74\%. Fare rate: \$3.50/mile. CO\textsubscript{2} factor: 0.411\,kg/mile~\cite{epa_emission_factors}. Time saved assumes an average in-city speed of 15\,mph.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+The projected annual CO\textsubscript{2} reduction of 2,539 tonnes is equivalent to removing approximately 552 passenger vehicles from the road for one year using the US EPA vehicle-equivalency method~\cite{epa_equivalencies}, computed by dividing total avoided emissions by the EPA benchmark of 4.6 metric tonnes of CO\textsubscript{2} per passenger vehicle per year.  All annual projections are derived by linearly scaling the sample estimates by a factor of $110{,}000{,}000 / 106{,}055 \approx 1{,}037$, where 110 million is the approximate annual NYC Yellow Taxi trip volume for 2015--16.  The reduction is achieved entirely through trip consolidation: fewer vehicle-miles are travelled in aggregate when two compatible rides share a single vehicle, directly reducing fuel consumption and tailpipe emissions.  Scaling from the 106,055-trip sample to the full annual NYC trip volume introduces proportional uncertainty; the actual reduction would depend on whether the observed pool rate of 16.06\% is sustained at full operational scale.  Nevertheless, the projection illustrates that ride pooling represents a viable demand-side strategy for urban emissions reduction without requiring capital investment in infrastructure or fleet electrification.
+
+% ============================================================
+\section{Discussion}
+\label{sec:discussion}
+% ============================================================
+
+This section interprets the results presented in \autoref{sec:eval}, examining why specific ensemble architectures outperform others, the practical trade-offs of the LR-LSTM design, the feasibility and sensitivity of the pooling algorithm, scalability considerations for real-world deployment, and the limitations that bound the present findings.
+
+\subsection{Why Stacking and Blending Lead Their Respective Metrics}
+
+The Stacking meta-learner, formalised in Algorithm~\ref{alg:stacking}, can assign negative or near-zero weights to base models whose errors are correlated, diversifying predictions beyond what fixed-weight averaging achieves.  Linear models including LR, Ridge, and Lasso are most accurate in low-demand cluster-bins, while XGBoost and Gradient Boosting excel at high-demand peak bins; the Ridge meta-learner exploits this complementarity to reduce RMSE to 4.3008 and lift R\textsuperscript{2} to 0.9922.
+
+Blending surpasses Stacking on MAPE, with values of 9.30\% versus 10.19\%, and on RMSLE, with values of 0.1226 versus 0.1394, despite its simpler holdout-based construction.  This difference is attributed to the holdout regime avoiding the cross-validation partition artefacts that inflate training-set correlation in Stacking.  Operators prioritising percentage accuracy should prefer Blending, while those requiring minimum absolute or variance-normalised error should prefer Stacking.
+
+\subsection{LR-LSTM: Insights and Limitations}
+
+The LR-LSTM Hybrid achieves the second-best MAPE of 11.64\% among individual models, confirming that dedicated residual LSTM modelling improves intra-day demand characterisation over vanilla regression.  Its RMSE of 6.0529, however, exceeds those of all ensemble methods, indicating that the linear first stage leaves non-linear spatial interactions underfit.  The XGBoost-LSTM variant with RMSE of 4.9658 partially addresses this by substituting a gradient-boosted tree as the first stage, yet still trails Stacking and Blending on RMSE.  A natural extension is to replace the linear first stage with a spatio-temporal graph network such as DCRNN~\cite{li2018diffusion}, reserving the LSTM solely for short-memory residual dynamics.
+
+\subsection{Ride Pooling Feasibility and Sensitivity}
+
+The baseline comparison in \autoref{tab:pooling_baseline} confirms that quality-constrained matching, rather than maximum pool rate, is the appropriate optimisation target for real-world shared-taxi deployment.  The operational pool rate of 16.06\% is paired with the highest per-trip savings and compatibility scores across all three strategies.
+
+\subsection{Scalability and Practical Deployment}
+
+The training pipeline processes 12.7 million trips in under two hours on Colab.  The Stacking meta-model adds minimal inference overhead.  The pooling matcher operates in $O(B^2)$ per batch of size $B$; with $B \leq 20$ in 10-minute bins this is highly tractable.  For real-time deployment, the demand model could be re-trained nightly using a rolling window, and the pooling matcher could operate as a streaming service on Apache Kafka.
+
+\subsection{Limitations}
+
+Several limitations of the present study warrant acknowledgement.  With respect to weather data, daily-resolution measurements from NOAA are used rather than sub-hourly observations; this coarseness limits the model's ability to capture sudden weather events such as storms or temperature drops that affect demand within a single time bin.  A finer-grained hourly weather feed would be expected to yield modest but measurable accuracy improvements.
+
+The ride pooling analysis is conducted on a sampled subset of 106,055 trips rather than the full test corpus.  While the bootstrap confidence intervals confirm that estimates are stable within this sample, full-population analysis across all 34 million test trips may reveal small distributional differences in pool rate and per-trip savings.  Furthermore, the current algorithm matches rides in pairs only; extending to three- or four-rider pools would require combinatorial matching and substantially increases computational complexity.
+
+A key behavioural assumption embedded in the pooling algorithm is that all passengers are willing to share their ride, given that compatibility constraints are satisfied.  In practice, willingness-to-share varies with passenger demographics, time of day, and trip purpose, and is not captured by the available trip records.  Similarly, estimated detour savings assume constant average travel speeds; actual detour lengths in live traffic conditions depend on congestion, road closures, and turn restrictions that are absent from the dataset.
+
+Finally, with only five chronological cross-validation folds, the Bonferroni-corrected pairwise Wilcoxon tests have limited statistical power, and none of the individual comparisons against Stacking reach the corrected significance threshold.  The Friedman test provides the primary evidence of overall significance.  Future work with larger datasets enabling ten or more folds would allow the pairwise tests to reach the corrected threshold reliably.
+
+% ============================================================
+\FloatBarrier
+\section{Conclusion}
+\label{sec:conclusion}
+% ============================================================
+
+This research introduces a unified data-driven framework for shared urban taxi systems, integrating ensemble-based demand forecasting with multi-criteria ride pooling within a single statistically validated pipeline.  By combining a novel LR-LSTM hybrid architecture, a systematic benchmarking protocol across fourteen models, and a constraint-aware compatibility matching algorithm, this work demonstrates that principled co-design can simultaneously address accuracy, statistical validity, and economic deployability, qualities that prior research has pursued in isolation.  The non-parametric Friedman test protocol introduced here challenges the convention of reporting single-run accuracy figures, establishing that rigorous cross-model significance testing is both tractable and necessary for credible benchmarking in the spatio-temporal forecasting domain.  Transport operators, city planners, and ride-hailing platforms can leverage the proposed framework using only publicly available trip records, making it directly transferable to any city that maintains open mobility data.
+
+The system's interpretable design enables meaningful collaboration between algorithmic outputs and domain expertise.  Bootstrap confidence intervals support formal reporting in policy documents and environmental impact assessments.  Beyond taxi systems, this work establishes design principles for integrated forecasting and matching pipelines across on-demand transport modes, contributing a replicable methodology for smart mobility applications ranging from ride-hailing and micromobility to demand-responsive transit in under-served urban areas.
+
+\section*{Author Contributions}
+\textbf{Conceptualisation}: V.S., M.N-A-R.
+\textbf{Data curation}: V.S.
+\textbf{Formal analysis}: V.S.
+\textbf{Funding acquisition}: M.N-A-R.
+\textbf{Investigation}: V.S.
+\textbf{Methodology}: V.S., M.N-A-R., M.A.M.T.
+\textbf{Project administration}: M.N-A-R.
+\textbf{Software}: V.S.
+\textbf{Supervision}: M.N-A-R. (primary), M.A.M.T. (co-supervisor)
+\textbf{Validation}: V.S., M.N-A-R.
+\textbf{Visualisation}: V.S.
+\textbf{Writing -- original draft}: V.S.
+\textbf{Writing -- review \& editing}: V.S., M.N-A-R., M.A.M.T.
+
+Vishal Sharma led the implementation, data curation, formal analysis, and empirical evaluation under supervision.  Md Noor-A-Rahim is the primary supervisor; he conceived the research direction, guided the methodology and statistical framework, administered the project, and provided critical review of the manuscript.  MD All Moon Tasir served as co-supervisor, contributing to the methodological design and providing feedback during manuscript preparation.
+
+\section*{Acknowledgements}
+The first author gratefully acknowledges the guidance and support of Dr Md Noor-A-Rahim and the research team at the School of Computer Science and Information Technology, University College Cork.  The authors thank MD All Moon Tasir of Universiti Kebangsaan Malaysia for his contributions to the methodology and manuscript review.  Computational resources were provided via Google Colab.  NYC Yellow Taxi Trip Records are made publicly available by the NYC Taxi and Limousine Commission under an open data licence.
+
+\section*{Declaration of Competing Interest}
+The authors declare no known competing financial interests or personal relationships that could have influenced the work reported in this paper.
+
+\section*{Data Availability}
+The NYC Yellow Taxi Trip Records used in this study are publicly available from the NYC Taxi and Limousine Commission and are mirrored on Kaggle at \url{https://www.kaggle.com/datasets/elemento/nyc-yellow-taxi-trip-data}.  Code and processed outputs are available from the corresponding author, Vishal Sharma, upon reasonable request.
+
+\bibliographystyle{elsarticle-num}
+\bibliography{references}
+
+\end{document}

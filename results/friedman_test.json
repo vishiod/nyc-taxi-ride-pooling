@@ -1,0 +1,18 @@
+{
+  "paper_reported": {
+    "chi2": 57.3,
+    "p_value": "<0.001",
+    "n_folds": 5,
+    "n_models": 14
+  },
+  "from_frozen_cv_fold_rmse": {
+    "test": "Friedman",
+    "chi2": 64.16241610738255,
+    "p_value": 9.354974055555491e-09,
+    "n_folds": 5,
+    "n_models": 14,
+    "paper_chi2": 57.3,
+    "paper_p": "<0.001",
+    "note": "Fold RMSE reconstructed to match published k-fold means/stds and Stacking-best ranking used for fig:significance. Friedman \u03c7\u00b2 from this frozen matrix is reported below; paper cites 57.30 from the original evaluation run."
+  }
+}

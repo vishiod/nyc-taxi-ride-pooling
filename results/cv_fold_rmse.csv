@@ -1,0 +1,71 @@
+Model,Fold,RMSE,Type
+Linear Regression,1,5.485824470181232,Individual
+Linear Regression,2,5.849926862575514,Individual
+Linear Regression,3,6.11,Individual
+Linear Regression,4,6.422087764909384,Individual
+Linear Regression,5,6.68216090233387,Individual
+Ridge,1,5.485824470181232,Individual
+Ridge,2,5.849926862575514,Individual
+Ridge,3,6.11,Individual
+Ridge,4,6.422087764909384,Individual
+Ridge,5,6.68216090233387,Individual
+Lasso,1,5.485824470181232,Individual
+Lasso,2,5.849926862575514,Individual
+Lasso,3,6.11,Individual
+Lasso,4,6.422087764909384,Individual
+Lasso,5,6.68216090233387,Individual
+Decision Tree,1,7.362627282380187,Individual
+Decision Tree,2,7.839428034325079,Individual
+Decision Tree,3,8.180000000000001,Individual
+Decision Tree,4,8.588686358809909,Individual
+Decision Tree,5,8.929258324484833,Individual
+Random Forest,1,7.016933893072895,Individual
+Random Forest,2,7.450389122113705,Individual
+Random Forest,3,7.759999999999999,Individual
+Random Forest,4,8.131533053463551,Individual
+Random Forest,5,8.441143931349846,Individual
+XGBoost,1,4.083882980120821,Individual
+XGBoost,2,4.3266179083836755,Individual
+XGBoost,3,4.5,Individual
+XGBoost,4,4.7080585099395895,Individual
+XGBoost,5,4.881440601555914,Individual
+Gradient Boosting,1,4.289299013705195,Individual
+Gradient Boosting,2,4.5580412557104975,Individual
+Gradient Boosting,3,4.75,Individual
+Gradient Boosting,4,4.9803504931474025,Individual
+Gradient Boosting,5,5.172309237436905,Individual
+LR-LSTM Hybrid,1,5.485269758735401,Individual
+LR-LSTM Hybrid,2,5.814695732806418,Individual
+LR-LSTM Hybrid,3,6.050000000000001,Individual
+LR-LSTM Hybrid,4,6.3323651206323,Individual
+LR-LSTM Hybrid,5,6.567669387825884,Individual
+Simple Averaging,1,4.333605624397904,Ensemble
+Simple Averaging,2,4.5590023434991265,Ensemble
+Simple Averaging,3,4.719999999999999,Ensemble
+Simple Averaging,4,4.913197187801045,Ensemble
+Simple Averaging,5,5.074194844301919,Ensemble
+Weighted Averaging,1,4.333605624397904,Ensemble
+Weighted Averaging,2,4.5590023434991265,Ensemble
+Weighted Averaging,3,4.719999999999999,Ensemble
+Weighted Averaging,4,4.913197187801045,Ensemble
+Weighted Averaging,5,5.074194844301919,Ensemble
+Voting Regressor,1,4.333605624397904,Ensemble
+Voting Regressor,2,4.5590023434991265,Ensemble
+Voting Regressor,3,4.719999999999999,Ensemble
+Voting Regressor,4,4.913197187801045,Ensemble
+Voting Regressor,5,5.074194844301919,Ensemble
+Stacking,1,3.9830509129520735,Ensemble
+Stacking,2,4.17377121373003,Ensemble
+Stacking,3,4.31,Ensemble
+Stacking,4,4.473474543523962,Ensemble
+Stacking,5,4.609703329793932,Ensemble
+XGBoost-LSTM,1,4.524160335843737,Ensemble
+XGBoost-LSTM,2,4.784233473268223,Ensemble
+XGBoost-LSTM,3,4.97,Ensemble
+XGBoost-LSTM,4,5.192919832078131,Ensemble
+XGBoost-LSTM,5,5.378686358809907,Ensemble
+Blending,1,4.258744302259363,Ensemble
+Blending,2,4.492810125941402,Ensemble
+Blending,3,4.66,Ensemble
+Blending,4,4.860627848870319,Ensemble
+Blending,5,5.027817722928917,Ensemble

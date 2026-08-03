@@ -1,0 +1,10 @@
+{
+  "sample_trips": 106055,
+  "annual_nyc_yellow_trips_2015": 146112989,
+  "scale_factor": 1377.7095752204045,
+  "fare_usd_per_mile": 3.5,
+  "co2_kg_per_mile": 0.411,
+  "avg_speed_mph": 15.0,
+  "pool_rate_pct": 16.06,
+  "avg_saving_pct": 19.74
+}
