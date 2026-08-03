@@ -369,4 +369,40 @@ A key behavioural assumption embedded in the pooling algorithm is that all passe
 
 Finally, with only five chronological cross-validation folds, the Bonferroni-corrected pairwise Wilcoxon tests have limited statistical power, and none of the individual comparisons against Stacking reach the corrected significance threshold.  The Friedman test provides the primary evidence of overall significance.  Future work with larger datasets enabling ten or more folds would allow the pairwise tests to reach the corrected threshold reliably.
 
+\subsection{Implications for Operators}
+
+The experimental results translate into actionable guidance for shared-taxi fleet operators and mobility platform engineers considering deployment of demand forecasting and ride pooling subsystems.
+
+For demand forecasting, the ensemble benchmarking results establish that Stacking should be the default deployment choice when dispatch decisions depend on absolute pickup counts, and Blending when service-level agreements are expressed as percentage accuracy.  The near-identical performance of Linear Regression, Ridge, and Lasso ($R^2 > 0.98$) indicates that a well-engineered feature matrix captures most predictable variance; operators with limited ML infrastructure could deploy a regularised linear model as a baseline and upgrade to ensemble meta-learning when accuracy requirements justify the additional training complexity.  The Friedman test result ($p < 0.001$) provides statistical backing for model selection decisions that would otherwise rest on single-run accuracy comparisons.
+
+For ride pooling, the baseline comparison in \autoref{tab:pooling_baseline} demonstrates that optimising for pool rate alone is counterproductive.  Operators should target compatibility score and per-trip savings as primary KPIs, accepting lower raw pool rates in exchange for higher-quality matches that passengers are more likely to accept.  The 16.06\% pool rate with 19.74\% per-trip savings represents a conservative operational estimate under strict constraints; relaxing the detour ratio from 0.27 to 0.35 raises the pool rate to approximately 23\% at the cost of reduced compatibility, providing a tunable service-level trade-off that operators can adjust without algorithmic redesign.
+
+The negative poolability classification result has direct system-architecture implications: pre-filtering rides at booking time based on trip-level features alone would either miss the majority of poolable rides (low recall) or flood the matching engine with false candidates (high false-positive rate).  Pooling systems should therefore operate reactively on concurrent trip streams within temporal batch windows, as implemented in Algorithm~\ref{alg:ride_pool}, rather than proactively rejecting or prioritising individual bookings.  Feature importances from the Random Forest classifier identify \texttt{trip\_distance}, weather conditions, and peak-hour temporal features as the strongest correlates of poolability, suggesting that operators should prioritise short-trip demand in dense zones during rush hours to maximise match formation rates.
+
+City-scale projections (\$28.7~million annual savings, 3,370~tonnes CO\textsubscript{2} avoided) should be communicated to stakeholders as order-of-magnitude estimates rather than precise forecasts.  The linear scaling assumption may over- or under-estimate returns at full deployment scale, but the bootstrap confidence intervals on the sample-level metrics confirm that the direction and approximate magnitude of the effect are robust to sampling variation.
+
+\subsection{Answers to Research Questions}
+
+The three research questions posed in \autoref{ch:introduction} receive direct answers from the experimental evidence reported in this chapter.
+
+\textbf{RQ1.}  Stacking achieves the strongest overall forecasting performance (RMSE~4.3008, R\textsuperscript{2}~0.9922); Blending leads on MAPE (9.30\%) and RMSLE (0.1226).  The Friedman test confirms that rank differences among the fourteen models are statistically significant ($\chi^2_F = 57.30$, $p < 0.001$).
+
+\textbf{RQ2.}  The LR-LSTM Hybrid achieves the second-best MAPE among individual models (11.64\%) but trails all ensemble methods on RMSE.  The XGBoost-LSTM variant reduces RMSE relative to LR-LSTM (4.9658 vs.\ 6.0529) but still trails Stacking and Blending, confirming that ensemble combination supersedes hybrid residual decomposition on aggregate error.
+
+\textbf{RQ3.}  The multi-criteria greedy matcher achieves a 16.06\% pool rate with mean compatibility 0.658 and per-trip savings 19.74\%, validated by bootstrap confidence intervals.  These operational outcomes substantially exceed naive baselines on match quality while remaining well below the Santi et al.~\parencite{santi2014quantifying} theoretical bound, as expected under realistic passenger constraints.
+
+\subsection{Limitations of the Evaluation}
+
+Several aspects of the evaluation design bound the scope of these answers and should be considered when interpreting or extending the results.
+
+The forecasting evaluation uses a single chronological train-test split with five cross-validation folds.  While \autoref{tab:kfold} confirms stability across 5-fold and 10-fold configurations, a rolling-window evaluation protocol---retraining monthly and testing on the subsequent month---would provide stronger evidence of sustained operational performance.  The present design tests generalisation across an 11-month gap but does not simulate continuous deployment with periodic retraining.
+
+The pooling evaluation uses a 106,055-trip sample rather than the full test corpus.  Bootstrap intervals confirm precision within the sample, but borough-level or time-of-day stratification of pool rates was not reported; full-population analysis may reveal heterogeneity not captured by aggregate metrics.  Pairwise matching excludes the potential gains from three- or four-rider pools that the Santi et al.~\parencite{santi2014quantifying} shareability network suggests are achievable under less restrictive assumptions.
+
+The poolability classification experiment uses a 10,000-ride test set with 84.63\% class imbalance.  All five classifiers achieve ROC-AUC values only modestly above random (0.626--0.667), and the conclusion that trip-level features are insufficient for booking-time prediction may not extend to richer feature sets incorporating real-time concurrent demand density or origin-destination pair frequencies.
+
+Statistical testing is limited by the five-fold design: Bonferroni-corrected Wilcoxon comparisons do not reach significance despite consistent Stacking advantages across folds.  The Friedman test provides overall significance evidence, but practitioners requiring pairwise confirmation should increase fold count or adopt less conservative correction methods such as Holm's step-down procedure.
+
+Impact projections scale sample estimates linearly to the full annual NYC volume, assuming constant pool rate and per-trip savings.  This assumption ignores potential saturation effects at full scale, spatial heterogeneity in pooling feasibility across boroughs, and the competitive dynamics of ride-hailing platforms that may shift demand patterns between training and deployment periods.
+
 \FloatBarrier

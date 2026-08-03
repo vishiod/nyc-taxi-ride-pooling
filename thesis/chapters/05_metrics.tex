@@ -4,15 +4,19 @@
 \label{sec:metrics}
 % ============================================================
 
-This chapter defines the metrics used to evaluate demand forecasting accuracy and, where relevant, to interpret ride pooling outcomes. Models are assessed using five complementary forecasting metrics~\parencite{scikit-learn}. Root Mean Squared Error and Mean Absolute Error are expressed in units of pickups per cluster-bin. Mean Absolute Percentage Error, the coefficient of determination, and Root Mean Squared Logarithmic Error are scale-independent, enabling valid cross-study comparisons.
+This chapter defines the metrics used to evaluate demand forecasting accuracy and, where relevant, to interpret ride pooling outcomes.  Models are assessed using five complementary forecasting metrics~\parencite{scikit-learn}.  Root Mean Squared Error and Mean Absolute Error are expressed in units of pickups per cluster-bin, providing directly interpretable error magnitudes for operators planning vehicle dispatch.  Mean Absolute Percentage Error, the coefficient of determination, and Root Mean Squared Logarithmic Error are scale-independent, enabling valid cross-study comparisons with prior work such as~\parencite{kim2020hybrid,xu2017realtime,liu2021epidemic}.  No single metric is sufficient on its own: each captures a distinct aspect of prediction quality, and model rankings in \autoref{ch:results} are interpreted across the full suite rather than by any one number in isolation.
 
 \section{Root Mean Squared Error (RMSE)}
 
-RMSE penalises large absolute errors and is reported in pickups per cluster--time-bin:
+RMSE penalises large absolute errors quadratically and is reported in pickups per cluster--time-bin:
 \begin{equation}
   \text{RMSE} = \sqrt{\frac{1}{n}\sum_{i=1}^n \bigl(y_i - \hat{y}_i\bigr)^2}.
   \label{eq:rmse}
 \end{equation}
+
+For pickup-count forecasting, RMSE answers the question: ``On average, how many pickups per bin is the model wrong by, with extra penalty for large misses?''  A RMSE of 4.30, as achieved by the Stacking ensemble in \autoref{ch:results}, implies that typical prediction errors are on the order of four pickups per 10-minute cluster window---a magnitude that operators can relate directly to fleet sizing decisions.  RMSE is the primary metric used in the Friedman non-parametric test (\autoref{sec:significance}) because it produces a single scalar per cross-validation fold for each of the fourteen models, enabling rank-based comparison across folds without distributional assumptions.
+
+\paragraph{Limitations.}  RMSE is sensitive to outliers: a single bin with a large festival or event surge can disproportionately inflate the aggregate score.  It also treats over-prediction and under-prediction symmetrically, whereas operational costs differ---over-dispatching idle vehicles is often less costly than under-serving peak demand.  Finally, RMSE is not normalised, so values from studies using different spatial granularities or bin widths are not directly comparable without additional context.
 
 \section{Mean Absolute Error (MAE)}
 
@@ -22,6 +26,10 @@ MAE measures average absolute deviation and is less sensitive to outliers than R
   \label{eq:mae}
 \end{equation}
 
+In the cluster-bin setting, MAE provides a robust estimate of typical prediction error without the quadratic amplification of large misses.  When RMSE and MAE diverge substantially for a given model, the gap indicates the presence of occasional large errors---often associated with peak-hour demand spikes in dense Manhattan clusters.  MAE is reported alongside RMSE in \autoref{tab:results_full} to give readers both a outlier-sensitive and an outlier-robust view of absolute error magnitude.
+
+\paragraph{Limitations.}  Like RMSE, MAE is expressed in raw pickup units and is not scale-independent.  It provides no information about whether the model systematically over- or under-predicts, nor does it normalise for the base demand level of each bin.  A MAE of 3.0 is more acceptable in a high-demand midtown cluster averaging 50 pickups per bin than in a low-demand outer-borough cluster averaging 5.
+
 \section{Mean Absolute Percentage Error (MAPE)}
 
 MAPE expresses error as a percentage of the true demand count, which amplifies deviations in low-demand bins:
@@ -30,13 +38,21 @@ MAPE expresses error as a percentage of the true demand count, which amplifies d
   \label{eq:mape}
 \end{equation}
 
+MAPE is the metric of choice for cross-study comparison because it is dimensionless: the Kim et al.~\parencite{kim2020hybrid} benchmark reports MAPE~=~15.2\%, and the present Stacking ensemble achieves MAPE~=~10.19\%, permitting a direct relative improvement estimate.  In \autoref{ch:results}, Blending achieves the lowest MAPE of 9.30\%, suggesting that holdout-based meta-training calibrates predictions more effectively in sparse low-demand bins where proportional errors dominate.
+
+\paragraph{Limitations.}  MAPE is undefined when $y_i = 0$, requiring exclusion or smoothing of zero-count bins; the present dataset contains a non-trivial proportion of such bins in low-activity clusters during off-peak hours.  MAPE asymmetrically penalises under-prediction more heavily than over-prediction in low-demand cells: predicting 1 when the true count is 5 yields MAPE~=~80\%, whereas predicting 9 when the true count is 5 yields MAPE~=~80\% as well, but the operational consequences differ.  These properties mean that a model optimising MAPE may sacrifice accuracy in high-demand peak bins to improve performance in sparse cells.
+
 \section{Coefficient of Determination ($R^2$)}
 
-$R^2$ measures the fraction of variance explained by the model:
+$R^2$ measures the fraction of variance in the observed pickup counts explained by the model:
 \begin{equation}
   R^2 = 1 - \frac{\displaystyle\sum_{i=1}^n(y_i-\hat{y}_i)^2}{\displaystyle\sum_{i=1}^n(y_i - \bar{y})^2}.
   \label{eq:r2}
 \end{equation}
+
+For spatio-temporal demand forecasting, $R^2$ near unity indicates that the feature set---lag counts, cyclical time encodings, weather, and spatial centroids---captures nearly all systematic variation in pickup demand.  The Stacking ensemble's $R^2$~=~0.9922 represents a 73.5\% relative improvement over the Kim et al.~\parencite{kim2020hybrid} benchmark of 0.572, though direct comparison requires caution because evaluation zones and feature sets differ.  $R^2$ is particularly informative for assessing whether additional model complexity yields meaningful explanatory power beyond a simple linear baseline ($R^2$~=~0.9843 for Linear Regression in \autoref{tab:results_full}).
+
+\paragraph{Limitations.}  $R^2$ always increases with additional predictors, even irrelevant ones, and can be misleadingly high when the target variable has low variance (e.g., overnight bins with near-zero demand across all clusters).  It does not indicate prediction bias: a model that systematically over-predicts by a constant offset can achieve high $R^2$ while producing poor operational forecasts.  $R^2$ is also sensitive to the test-set time period; models evaluated on a single season may appear stronger than they would under year-round deployment.
 
 \section{Root Mean Squared Logarithmic Error (RMSLE)}
 
@@ -46,6 +62,25 @@ RMSLE dampens the influence of large absolute counts while remaining sensitive t
   \label{eq:rmsle}
 \end{equation}
 
+The logarithmic transform in RMSLE makes it particularly suited to pickup-count data where demand spans orders of magnitude across clusters and time bins: a midtown rush-hour bin may observe 80 pickups while an overnight outer-borough bin observes 2.  RMSLE penalises proportional errors equally regardless of scale, so a prediction of 40 when the true count is 80 (50\% error) incurs the same log-scale penalty as a prediction of 2 when the true count is 4.  In \autoref{ch:results}, Blending achieves the lowest RMSLE of 0.1226, consistent with its MAPE leadership and confirming that holdout-based meta-training improves calibration across the full demand spectrum.
+
+\paragraph{Limitations.}  RMSLE under-penalises large absolute errors on high-count bins relative to RMSE, which may be the operationally relevant criterion during peak dispatch.  It is less commonly reported in the taxi demand literature, limiting direct comparison with prior studies.  Like MAPE, RMSLE treats symmetric proportional error equally, ignoring the asymmetric cost structure of over- versus under-dispatch.
+
+\section{Rationale for the Multi-Metric Suite}
+
+The five metrics collectively address the limitations of any individual measure.  RMSE and MAE quantify absolute dispatch error in interpretable pickup units; MAPE and RMSLE provide scale-independent views that enable cross-study comparison and fair assessment across high- and low-demand bins; $R^2$ confirms that the model captures systematic demand variation rather than noise.  The divergence between Stacking (best RMSE and $R^2$) and Blending (best MAPE and RMSLE) in \autoref{ch:results} illustrates why a single metric would mislead: no one model dominates all dimensions, and operator priorities---minimising absolute miss during peaks versus minimising proportional error during off-peak---should guide deployment choice.
+
+\section{Statistical Testing Methodology}
+\label{sec:metrics-significance}
+
+Point estimates on a single held-out test set cannot establish whether performance differences among models arise from genuine architectural superiority or from sampling variation within a particular temporal segment.  This thesis therefore supplements the metric suite with a two-stage non-parametric testing protocol applied to per-fold cross-validation scores, as detailed in \autoref{sec:significance}.  The procedure is described here at the methodological level; numerical results appear in \autoref{ch:results}.
+
+\paragraph{Friedman test.}  The Friedman test~\parencite{scikit-learn} evaluates the null hypothesis that all $k{=}14$ models produce identical RMSE rank distributions across $N{=}5$ chronological cross-validation folds.  For each fold, models are ranked from 1 (lowest RMSE) to 14 (highest RMSE); the test statistic aggregates squared deviations of mean ranks from the expected value under the null.  Because the test operates on ranks rather than raw RMSE values, it requires no assumption of normality or homoscedasticity---properties that chronological mobility data routinely violate due to heteroskedastic demand and occasional event-driven outliers.  Rejection of the null hypothesis ($\alpha{=}0.05$) provides evidence that at least one model differs significantly from the others, though it does not identify which pairs differ.
+
+\paragraph{Wilcoxon signed-rank post-hoc tests.}  When the Friedman test rejects the null, pairwise Wilcoxon signed-rank tests compare the best-performing model (Stacking) against each of the remaining thirteen models using the five paired fold-level RMSE observations.  The Wilcoxon test is appropriate here because the paired differences are unlikely to be normally distributed and the sample size per comparison is small ($N{=}5$).  Because thirteen simultaneous comparisons are conducted, the Bonferroni correction adjusts the significance threshold to $\alpha / 13 \approx 0.0038$, controlling the family-wise error rate.  With only five folds, the minimum attainable two-sided Wilcoxon $p$-value is 0.031, meaning that Bonferroni-corrected pairwise tests may lack statistical power even when the Friedman test confirms overall significance.  This power limitation is acknowledged in \autoref{ch:results} and \autoref{ch:conclusion}; the Friedman test is therefore treated as the primary evidence of cross-model significance, with Wilcoxon post-hoc results reported for completeness.
+
+\paragraph{Cross-validation stability.}  To verify that model rankings are not artefacts of a particular fold count, mean RMSE and standard deviation are reported under both 5-fold and 10-fold chronological cross-validation for selected models (\autoref{tab:kfold}).  Consistent rankings across fold configurations confirm that the metric-based conclusions are robust to the specific temporal partitioning scheme.
+
 \section{Summary}
 
-Together, these five metrics capture absolute error magnitude, percentage deviation, explained variance, and log-scale sensitivity. No single metric is used in isolation; model rankings in \autoref{ch:results} are interpreted across the full metric suite, with statistical significance assessed via the Friedman test.
+Together, these five metrics capture absolute error magnitude, percentage deviation, explained variance, and log-scale sensitivity across the full range of cluster-bin demand levels.  No single metric is used in isolation; model rankings in \autoref{ch:results} are interpreted across the full metric suite, with statistical significance assessed via the Friedman test and pairwise Wilcoxon post-hoc comparisons with Bonferroni correction.  This multi-metric, statistically validated evaluation protocol ensures that conclusions drawn in response to RQ1 and RQ2 rest on reproducible evidence rather than single-run accuracy figures.
