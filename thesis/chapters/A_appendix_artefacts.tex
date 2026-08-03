@@ -1,0 +1,31 @@
+% ============================================================
+\chapter{Program Listings and Implementation Artefacts}
+\label{ch:appendix-artefacts}
+% ============================================================
+
+As required by the CS6400 dissertation guidelines, detailed program listings are placed in the appendix rather than in the main body.  The complete implementation for this project is provided as executable source in the accompanying project repository and consists of the following artefacts.
+
+\section{Primary Research Notebook}
+
+\begin{itemize}
+  \item \texttt{NYC\_TaxiRidePooling\_AllEnsembles.ipynb} --- end-to-end pipeline covering data ingestion, spatial clustering, feature engineering, fourteen forecasting models (individual estimators, LR-LSTM hybrid, and six ensemble strategies), chronological evaluation, Friedman/Wilcoxon significance testing, constraint-aware ride pooling, bootstrap confidence intervals, and city-scale impact scaling.
+\end{itemize}
+
+\section{Reproduction Scripts and Derived Tables}
+
+\begin{itemize}
+  \item \texttt{reproduce\_paper\_results.ipynb} and \texttt{scripts/regenerate\_all.py} --- helpers that regenerate selected tables and figures from stored result files without re-downloading the full taxi corpus.
+  \item \texttt{results/} --- numerical outputs used by the thesis tables (model metrics, cross-validation summaries, pooling statistics, bootstrap intervals, and economic impact estimates).
+  \item \texttt{reproduced\_tables/} and \texttt{reproduced\_figures/} --- \LaTeX{} table fragments and figure exports corresponding to the thesis and paper.
+\end{itemize}
+
+\section{Thesis and Figure Sources}
+
+\begin{itemize}
+  \item \texttt{thesis/} --- \texttt{uccthesis} \LaTeX{} sources and vector figures required to compile this document.
+  \item \texttt{paper/} --- companion CAS-format paper sources derived from the same study.
+\end{itemize}
+
+\section{Data Policy}
+
+Raw NYC Yellow Taxi trip files are \emph{not} redistributed in the repository.  They are publicly available from the NYC Taxi and Limousine Commission / Kaggle mirrors cited in the main text.  Keeping large data files out of the repository follows the CS6400 guidance on avoiding space-related problems on the departmental Git host.

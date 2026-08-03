@@ -29,6 +29,12 @@
   urlcolor=blue
 }
 
+\providecommand{\chapterautorefname}{Chapter}
+\providecommand{\sectionautorefname}{Section}
+\providecommand{\subsectionautorefname}{Section}
+\providecommand{\figureautorefname}{Figure}
+\providecommand{\tableautorefname}{Table}
+\providecommand{\algorithmautorefname}{Algorithm}
 \renewcommand{\chapterautorefname}{Chapter}
 \renewcommand{\sectionautorefname}{Section}
 \renewcommand{\subsectionautorefname}{Section}
@@ -44,10 +50,13 @@
 
 \addbibresource{references.bib}
 
+% CS6400 MSc Computing Science dissertation (uccthesis).
+% Do not alter uccthesis.cls settings that affect font, spacing, or layout.
+% Electronic thesis filename at Canvas submission: 125103619.pdf
 \title{EnsembleNet: Statistically Validated Demand Forecasting and Constraint-Aware Ride Pooling for Urban Shared Taxi Systems}
 \author{Vishal Sharma}
 \supervisor{Dr Md Noor-A-Rahim}
-\secondreader{TBD}
+\secondreader{TBD}% replace with assigned Second Reader before submission
 \date{August 2026}
 
 \abstract{Urban taxi systems face mounting pressure to reduce congestion, cost, and emissions, yet existing studies address demand forecasting and ride pooling in isolation and rarely apply rigorous statistical validation. This thesis introduces a unified data-driven framework combining ensemble-based demand forecasting with a multi-criteria ride pooling algorithm, evaluated on New York City Yellow Taxi records. A novel LR-LSTM hybrid architecture decomposes demand into a linear trend and a non-linear residual, and six ensemble strategies are benchmarked against eight individual estimators under a strictly chronological train-test protocol, with a Friedman test confirming statistical significance of observed differences. The ride pooling component enforces temporal, spatial, directional, and detour constraints, with city-scale economic and environmental impact quantified via bootstrap estimation. Results show that the Stacking ensemble substantially outperforms the established LR-LSTM benchmark, and the pooling algorithm delivers meaningful reductions in per-trip cost and carbon emissions, demonstrating a statistically validated and deployable approach to shared taxi system management.}
@@ -59,6 +68,13 @@
 
 \begin{document}
 
+% Front matter (title page, abstract, declaration, ToC, LoT, LoF) is inserted by uccthesis.
+% Chapter map vs CS6400 grading components:
+%   Problem statement & analysis  -> Chs.~1--2
+%   Main body (methods/design)    -> Chs.~3--5
+%   Testing, evaluation, conclusion -> Chs.~6--7
+%   Program listings              -> Appendix~\ref{ch:appendix-artefacts}
+
 \input{chapters/01_introduction}
 \input{chapters/02_related_work}
 \input{chapters/03_methods}
@@ -66,6 +82,9 @@
 \input{chapters/05_metrics}
 \input{chapters/06_results}
 \input{chapters/07_conclusion}
+
+\appendix
+\input{chapters/A_appendix_artefacts}
 
 \backmatter
 \printbibliography

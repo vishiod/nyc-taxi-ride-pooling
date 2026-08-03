@@ -1,0 +1,51 @@
+% ============================================================
+\chapter{Performance Metrics}
+\label{ch:metrics}
+\label{sec:metrics}
+% ============================================================
+
+This chapter defines the metrics used to evaluate demand forecasting accuracy and, where relevant, to interpret ride pooling outcomes. Models are assessed using five complementary forecasting metrics~\parencite{scikit-learn}. Root Mean Squared Error and Mean Absolute Error are expressed in units of pickups per cluster-bin. Mean Absolute Percentage Error, the coefficient of determination, and Root Mean Squared Logarithmic Error are scale-independent, enabling valid cross-study comparisons.
+
+\section{Root Mean Squared Error (RMSE)}
+
+RMSE penalises large absolute errors and is reported in pickups per cluster--time-bin:
+\begin{equation}
+  \text{RMSE} = \sqrt{\frac{1}{n}\sum_{i=1}^n \bigl(y_i - \hat{y}_i\bigr)^2}.
+  \label{eq:rmse}
+\end{equation}
+
+\section{Mean Absolute Error (MAE)}
+
+MAE measures average absolute deviation and is less sensitive to outliers than RMSE:
+\begin{equation}
+  \text{MAE} = \frac{1}{n}\sum_{i=1}^n \bigl|y_i - \hat{y}_i\bigr|.
+  \label{eq:mae}
+\end{equation}
+
+\section{Mean Absolute Percentage Error (MAPE)}
+
+MAPE expresses error as a percentage of the true demand count, which amplifies deviations in low-demand bins:
+\begin{equation}
+  \text{MAPE} = \frac{100}{n}\sum_{i=1}^n \left|\frac{y_i - \hat{y}_i}{y_i}\right|.
+  \label{eq:mape}
+\end{equation}
+
+\section{Coefficient of Determination ($R^2$)}
+
+$R^2$ measures the fraction of variance explained by the model:
+\begin{equation}
+  R^2 = 1 - \frac{\displaystyle\sum_{i=1}^n(y_i-\hat{y}_i)^2}{\displaystyle\sum_{i=1}^n(y_i - \bar{y})^2}.
+  \label{eq:r2}
+\end{equation}
+
+\section{Root Mean Squared Logarithmic Error (RMSLE)}
+
+RMSLE dampens the influence of large absolute counts while remaining sensitive to relative mispredictions:
+\begin{equation}
+  \text{RMSLE} = \sqrt{\frac{1}{n}\sum_{i=1}^n \bigl(\ln(1+y_i)-\ln(1+\hat{y}_i)\bigr)^2}.
+  \label{eq:rmsle}
+\end{equation}
+
+\section{Summary}
+
+Together, these five metrics capture absolute error magnitude, percentage deviation, explained variance, and log-scale sensitivity. No single metric is used in isolation; model rankings in \autoref{ch:results} are interpreted across the full metric suite, with statistical significance assessed via the Friedman test.

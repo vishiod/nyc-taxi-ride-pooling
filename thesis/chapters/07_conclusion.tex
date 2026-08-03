@@ -1,0 +1,24 @@
+% ============================================================
+\chapter{Conclusion}
+\label{ch:conclusion}
+% ============================================================
+
+\section{Summary of Contributions}
+
+This research introduces a unified data-driven framework for shared urban taxi systems, integrating ensemble-based demand forecasting with multi-criteria ride pooling within a single statistically validated pipeline.  By combining a novel LR-LSTM hybrid architecture, a systematic benchmarking protocol across fourteen models, and a constraint-aware compatibility matching algorithm, this work demonstrates that principled co-design can simultaneously address accuracy, statistical validity, and economic deployability, qualities that prior research has pursued in isolation.
+
+\section{Key Findings}
+
+The Stacking ensemble achieves the strongest overall demand-forecasting performance under chronological evaluation, while Blending leads on percentage and log-scale error metrics. The Friedman test confirms that observed differences across the fourteen models are statistically significant. The constraint-aware pooling algorithm produces operationally realistic shared rides, with bootstrap confidence intervals supporting stable estimates of pool rate, savings, and environmental impact when scaled to city level.
+
+\section{Limitations and Trade-offs}
+
+Several limitations bound the present findings. Weather features are available only at daily resolution, which limits sensitivity to intra-day shocks. Ride pooling is evaluated on a sampled subset and currently matches rides in pairs rather than larger groups. Willingness-to-share is assumed once compatibility constraints are met, and detour estimates use average travel speeds rather than live congestion. With five chronological folds, Bonferroni-corrected pairwise Wilcoxon tests have limited power, so the Friedman test remains the primary significance evidence.
+
+\section{Future Directions}
+
+Future work may incorporate finer-grained weather feeds, full-population pooling analysis, multi-passenger matching, and behavioural willingness-to-share models. Graph-based demand forecasters such as DCRNN or STAEformer-style architectures could replace the linear first stage of the hybrid model where road topology is available. Larger fold counts would also strengthen pairwise post-hoc testing. The non-parametric significance protocol introduced here challenges the convention of reporting single-run accuracy figures, establishing that rigorous cross-model testing is both tractable and necessary for credible benchmarking in spatio-temporal forecasting.
+
+\section{Data and Software Availability}
+
+The NYC Yellow Taxi Trip Records used in this study are publicly available from the NYC Taxi and Limousine Commission and are mirrored on Kaggle at \url{https://www.kaggle.com/datasets/elemento/nyc-yellow-taxi-trip-data}.  In accordance with CS6400 guidance, large raw trip files are not redistributed with the project repository.  The repository shared with the supervisor contains the thesis \LaTeX{} sources and figures, implementation notebooks and scripts, and derived numerical result files required to regenerate the reported tables and figures; see Appendix~\ref{ch:appendix-artefacts}.

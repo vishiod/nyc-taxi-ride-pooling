@@ -1,0 +1,153 @@
+% ============================================================
+\chapter{Proposed Framework}
+\label{ch:framework}
+\label{ch:models}
+% ============================================================
+
+This chapter describes the demand prediction models and ensemble strategies that constitute the EnsembleNet framework.  Individual model configurations are detailed first, followed by the two-stage LR-LSTM hybrid architecture and the six ensemble strategies.
+
+\section{Individual Models}
+
+Eight individual models are trained using \texttt{scikit-learn}~\parencite{scikit-learn}, as summarised in \autoref{tab:individual_models}.  Each model is trained on the same chronologically split feature matrix, ensuring that performance differences reflect modelling capacity rather than differences in data access.  All preprocessing steps, including standardisation for linear models and the construction of lag and cyclic temporal features, are applied identically across the model family to isolate the effect of the learning algorithm.
+
+\begin{table}[t]
+\centering
+\caption{Individual forecasting models and their configurations.\label{tab:individual_models}}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Model} & \textbf{Description} \\
+\midrule
+Linear Regression & Ordinary least squares baseline \\
+Ridge~\parencite{hoerl1970ridge} & Linear regression with $\ell_2$ regularisation, $\alpha=1.0$ \\
+Lasso~\parencite{tibshirani1996lasso} & Linear regression with $\ell_1$ regularisation, $\alpha=0.01$ \\
+Decision Tree & Unpruned tree; baseline for tree-based methods \\
+Random Forest~\parencite{breiman2001rf} & 200-tree bagging ensemble \\
+XGBoost~\parencite{chen2016xgboost} & Gradient-boosted trees with $\ell_1/\ell_2$ regularisation \\
+Gradient Boosting~\parencite{friedman2001gbm} & Sequential residual boosting via scikit-learn GBM \\
+LR-LSTM Hybrid~\parencite{hochreiter1997long} & Two-stage residual architecture; see \autoref{sec:lrlstm} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\autoref{tab:hyperparams} documents the full hyperparameter specification for all 14 models, covering both individual estimators and ensemble strategies.  For tree-based models, the number of estimators is set to 200 to balance bias and variance without incurring prohibitive training time.  For the LSTM component of the LR-LSTM Hybrid, a lookback window of 10 time steps is used alongside an architecture of two stacked LSTM layers with interleaved dropout, trained with Adam at a learning rate of $10^{-3}$ and early stopping with a patience of 5 epochs.  Ensemble meta-learners are uniformly instantiated as Ridge regression with $\alpha{=}1.0$, providing a regularised but interpretable second-stage estimator that is unlikely to overfit the meta-feature space.
+
+\begin{table}[t]
+\centering
+\caption{Hyperparameter specifications for all 14 models (Individual and Ensemble). RF = Random Forest, GBM = Gradient Boosting, XGB = XGBoost, seq\_len = LSTM input sequence length.\label{tab:hyperparams}}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{@{}
+  >{\raggedright\arraybackslash}p{2.4cm}
+  >{\raggedright\arraybackslash}p{1.5cm}
+  >{\raggedright\arraybackslash}X
+  >{\raggedright\arraybackslash}p{2.2cm} @{}}
+\toprule
+\textbf{Model} & \textbf{Type} & \textbf{Key Hyperparameters} & \textbf{Notes} \\
+\midrule
+Linear Regression & Individual & \texttt{fit\_intercept=True} (sklearn defaults) & OLS baseline \\
+Ridge & Individual & \texttt{alpha=1.0, max\_iter=1000} & $\ell_2$ regularisation \\
+Lasso & Individual & \texttt{alpha=0.01, max\_iter=1000} & $\ell_1$ regularisation \\
+Decision Tree & Individual & \texttt{criterion='squared\_error', max\_depth=None} & Unpruned \\
+Random Forest & Individual & \texttt{n\_estimators=200, n\_jobs=-1, random\_state=42} & Bagging, bootstrapped \\
+XGBoost & Individual & \texttt{n\_estimators=200, lr=0.1, max\_depth=6, subsample=0.8, colsample=0.8, reg\_alpha=0.1, reg\_lambda=1.0} & L1+L2 regularised \\
+Gradient Boosting & Individual & \texttt{n\_estimators=200, lr=0.1, max\_depth=4, subsample=0.8, min\_samples\_split=5} & Sequential GBM \\
+LR-LSTM (Stage 1) & Hybrid & Same as Linear Regression & Trend extraction \\
+LR-LSTM (Stage 2) & Hybrid & \texttt{LSTM(64)$\to$Drop(0.2)$\to$LSTM(32)$\to$Drop(0.2)$\to$Dense(1); Adam(lr=1e-3); MAE loss; epochs$\le$50; patience=5; batch=32; seq\_len=10} & Residual modelling \\
+Simple Averaging & Ensemble & Base: LR, XGB, GB; equal weights $[1/3,1/3,1/3]$ & Averaging \\
+Weighted Averaging & Ensemble & Weights $\propto 1/\text{RMSE}_{\text{val}}$ & Performance-weighted \\
+Voting Regressor & Ensemble & sklearn \texttt{VotingRegressor}; base: LR, XGB, GB & sklearn version \\
+Stacking & Ensemble & Base: LR, Ridge, Lasso, DT, RF, XGB, GB; \texttt{cv=5} (five contiguous chronological folds, no shuffle); meta: Ridge($\alpha$=1.0) & OOF meta-features \\
+XGBoost-LSTM & Hybrid & Stage 1: XGBoost; Stage 2: LSTM (same as LR-LSTM) & Stronger first stage \\
+Blending & Ensemble & Holdout=20\%; base: LR, Ridge, Lasso, DT, RF, XGB, GB; meta: Ridge($\alpha$=1.0) & Holdout-based \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth, height=0.55\textheight, keepaspectratio]{Figures/ensemble_architecture.pdf}
+  \caption{Six ensemble model architectures evaluated in this study: (a) Simple Averaging, (b) Weighted Averaging, (c) Voting Regressor, (d) Stacking with out-of-fold meta-learning, (e) XGBoost-LSTM Hybrid, (f) Blending with a held-out validation partition.}
+  \label{fig:ensemble}
+\end{figure}
+
+\section{LR-LSTM Hybrid Architecture}
+\label{sec:lrlstm}
+
+Motivated by \parencite{kim2020hybrid}, the LR-LSTM Hybrid decomposes demand into a linear component and a non-linear residual, as illustrated in \autoref{fig:hybrid}.  The model operates in two stages.  In Stage~1, the input feature matrix $\mathbf{X}$ is standardised and a Linear Regression model is fitted to extract the deterministic trend, as shown in \eqref{eq:lr_stage1}:
+\begin{equation}
+  \hat{\mathbf{y}}^{LR} = \tilde{\mathbf{X}}\boldsymbol{\hat{\beta}}, \qquad
+  \mathbf{r} = \mathbf{y} - \hat{\mathbf{y}}^{LR}
+  \label{eq:lr_stage1}
+\end{equation}
+In Stage~2, an LSTM network is trained on the residual series $\mathbf{r}$ from \eqref{eq:lr_stage1} using a lookback window of $L{=}10$ steps and the architecture $\texttt{LSTM}(64)\to\texttt{Dropout}(0.2)\to\texttt{LSTM}(32)\to\texttt{Dropout}(0.2)\to\texttt{Dense}(1)$, optimised with Adam at a learning rate of $10^{-3}$ and early stopping with patience equal to 5~\parencite{tensorflow2015}.  The final hybrid prediction is given in \eqref{eq:hybrid_combo}:
+\begin{equation}
+  \hat{\mathbf{y}}^{\text{hyb}} = \hat{\mathbf{y}}^{LR}_{\text{test}} + \hat{\mathbf{r}}_{\text{test}}
+  \label{eq:hybrid_combo}
+\end{equation}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth, height=0.42\textheight, keepaspectratio]{Figures/hybrid_architecture.pdf}
+  \caption{LR-LSTM Hybrid architecture: Stage~1 (Linear Regression) extracts the deterministic trend; Stage~2 (LSTM) models the non-linear residuals.}
+  \label{fig:hybrid}
+\end{figure}
+
+\section{Ensemble Strategies}
+\label{sec:ensembles}
+
+\autoref{fig:ensemble} illustrates the six ensemble strategies evaluated in this study.
+
+The six strategies span a spectrum from parameter-free aggregation to learned meta-combination.  Panels~(a)--(c) represent direct aggregation methods: Simple Averaging applies equal weights, Weighted Averaging scales each model's contribution inversely to its validation RMSE, and the Voting Regressor delegates the combination to scikit-learn's built-in implementation.  These three methods share the same set of base estimators and differ only in how their predictions are merged; as a result, their test-set performance is closely clustered.  Panel~(d), Stacking, is the most sophisticated direct combination strategy: a Ridge meta-learner is trained on out-of-fold predictions produced by 5-fold cross-validation, which ensures that the meta-model never sees in-sample predictions during training and therefore generalises to unseen data.  Panel~(e), the XGBoost-LSTM Hybrid, replaces the linear first stage of the LR-LSTM with XGBoost to provide a stronger non-linear trend predictor before residual modelling.  Panel~(f), Blending, trains base models on 80\% of the data and uses their predictions on the remaining 20\% holdout to train the meta-learner, providing a simpler but potentially noisier alternative to Stacking.  The architectural diversity across these six strategies is deliberate: different inductive biases produce models whose errors are partially independent, and combining partially independent errors is the mechanism through which ensemble methods improve upon any individual constituent.
+
+\paragraph{Simple Averaging.} Equal-weight average of LR, XGBoost, and Gradient Boosting~\parencite{scikit-learn}:
+\begin{equation}
+  \hat{y}^{SA} = \frac{1}{3}\sum_{k \in \{LR, XGB, GB\}} \hat{y}^{(k)}
+  \label{eq:simple_avg}
+\end{equation}
+
+\paragraph{Weighted Averaging.} Weights inversely proportional to validation RMSE~\parencite{breiman2001rf}:
+\begin{equation}
+  w_k = \frac{1/\text{RMSE}_k}{\sum_j 1/\text{RMSE}_j}, \quad \hat{y}^{WA} = \sum_k w_k \hat{y}^{(k)}
+  \label{eq:weighted_avg}
+\end{equation}
+
+\paragraph{Voting Regressor.} Scikit-learn \texttt{VotingRegressor} with LR, XGBoost, and Gradient Boosting base estimators.  Under equal weights this coincides with the Simple Averaging predictor in \eqref{eq:simple_avg}.
+
+\paragraph{Stacking.}  Following \parencite{wolpert1992stacking}, base models generate out-of-fold predictions via 5-fold CV; these predictions form a meta-feature matrix $\mathbf{Z}\in\mathbb{R}^{n\times M}$.  A Ridge meta-learner solves the regularised objective in \eqref{eq:stacking}, and the stacked forecast follows \eqref{eq:stack_pred}.  Algorithm~\ref{alg:stacking} formalises this procedure.
+\begin{align}
+  \boldsymbol{\hat{\alpha}} &= \arg\min_{\boldsymbol{\alpha}}\,
+  \|\mathbf{y}-\mathbf{Z}\boldsymbol{\alpha}\|_2^2 + \lambda\|\boldsymbol{\alpha}\|_2^2,
+  \label{eq:stacking} \\
+  \hat{\mathbf{y}}^{\text{stack}} &= \mathbf{Z}_{\text{test}}\boldsymbol{\hat{\alpha}}.
+  \label{eq:stack_pred}
+\end{align}
+
+\begin{algorithm}[H]
+\caption{Stacking Ensemble (Meta-Learning via 5-Fold CV)}
+\label{alg:stacking}
+\begin{algorithmic}[1]
+\Require Base models $\{f_1,\ldots,f_M\}$; meta-model Ridge($\alpha{=}1$); data $(\mathbf{X},\mathbf{y})$, test $\mathbf{X}_{\text{test}}$
+\Ensure Meta-learned prediction $\hat{\mathbf{y}}^{\text{stack}}$
+\State Initialise meta-feature matrix $\mathbf{Z}\in\mathbb{R}^{n\times M}$
+\For{each fold $k = 1,\ldots,5$}
+  \For{each base model $f_m$}
+    \State Train $f_m$ on $\mathbf{X}_{\text{train}\setminus k}$; predict $\mathbf{Z}_{k,m}\gets f_m(\mathbf{X}_k)$
+  \EndFor
+\EndFor
+\State $\boldsymbol{\hat{\alpha}} \gets \arg\min_{\boldsymbol{\alpha}}\,\|\mathbf{y}-\mathbf{Z}\boldsymbol{\alpha}\|_2^2 + \lambda\|\boldsymbol{\alpha}\|_2^2$
+\State $\mathbf{Z}_{\text{test}} \gets \bigl[f_m(\mathbf{X}_{\text{test}})\bigr]_{m=1}^{M}$
+\State \Return $\hat{\mathbf{y}}^{\text{stack}} \gets \mathbf{Z}_{\text{test}}\boldsymbol{\hat{\alpha}}$
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{XGBoost-LSTM Hybrid.}  Replaces Stage~1 LR with XGBoost, providing a stronger non-linear first-stage predictor before residual LSTM modelling.  The combined forecast is given in \eqref{eq:xgblstm}:
+\begin{equation}
+  \hat{\mathbf{y}}^{\text{XGB-LSTM}} = \hat{\mathbf{y}}^{\text{XGB}} + \hat{\mathbf{r}}^{\text{LSTM}}.
+  \label{eq:xgblstm}
+\end{equation}
+
+\paragraph{Blending.}  A 20\% holdout partition trains base models on the remaining 80\%; their holdout predictions form a meta-feature matrix $\mathbf{Z}^{\text{hold}}$ used to fit Ridge coefficients $\boldsymbol{\hat{\alpha}}^{\text{hold}}$.  The blended test prediction in \eqref{eq:blending} avoids the cross-validation partitioning artefacts of Stacking:
+\begin{equation}
+  \hat{\mathbf{y}}^{\text{blend}} = \mathbf{Z}^{\text{test}}_{\text{hold}}\,\boldsymbol{\hat{\alpha}}^{\text{hold}}.
+  \label{eq:blending}
+\end{equation}

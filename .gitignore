@@ -7,8 +7,11 @@ venv/
 .env
 kaggle.json
 *.zip
+
+# LaTeX build artefacts
 *.aux
 *.bbl
+*.bcf
 *.blg
 *.log
 *.out
@@ -18,3 +21,13 @@ kaggle.json
 *.fls
 *.fdb_latexmk
 *.synctex.gz
+*.run.xml
+*.mtc*
+*.maf
+*.bbl-SAVE*
+
+# Large raw taxi data (do not commit; download via Kaggle)
+data/
+*.parquet
+*.csv.gz
+yellow_tripdata*

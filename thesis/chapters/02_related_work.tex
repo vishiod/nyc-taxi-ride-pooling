@@ -3,11 +3,17 @@
 \label{ch:related}
 % ============================================================
 
-Prior research on urban taxi systems can be organised across three threads: demand forecasting, ride pooling, and ensemble methods.
+Prior research on urban taxi systems can be organised across three threads: demand forecasting, ride pooling, and ensemble methods. This chapter reviews each thread in turn and summarises the gaps addressed by this thesis.
+
+\section{Demand Forecasting}
 
 Early demand forecasting methods relied on ARIMA variants, which capture linear temporal patterns but cannot encode spatial correlations.  Moreira-Matias et al.~\parencite{moreira2013predicting} demonstrated streaming-based demand prediction from real-time GPS data, while Lv et al.~\parencite{lv2015traffic} showed that deep learning outperforms time-series baselines on large-scale traffic flow data.  Zhang et al.~\parencite{zhang2017deep} introduced ST-ResNet, which treats citywide demand grids as image sequences processed by deep residual convolutions.  Xu et al.~\parencite{xu2017realtime} confirmed that LSTM networks outperform feed-forward architectures for real-time NYC taxi demand by exploiting sequential autocorrelation.  Ma et al.~\parencite{ma2015long} and Ke et al.~\parencite{ke2017short} further validated LSTM superiority for transportation speed and ride-hailing demand tasks respectively.  Kim et al.~\parencite{kim2020hybrid} proposed the LR-LSTM model, a two-stage hybrid achieving R\textsuperscript{2}~=~0.572 and MAPE~=~15.2\% on Murray Hill, NYC, which serves as the primary benchmark in this study.  Liu et al.~\parencite{liu2021epidemic} reported XGBoost attaining R\textsuperscript{2}~=~0.984 on NYC Yellow Taxi data, highlighting distributional shift as a key challenge.  Guo et al.~\parencite{guo2019attention} proposed attention-based spatio-temporal graph convolutional networks, demonstrating that graph structures capture inter-zone dependencies more effectively than grid-based methods.  Li et al.~\parencite{li2018diffusion} introduced DCRNN, which encodes directional diffusion on road graphs, though this requires detailed road-topology data unavailable in the present study.  Zhou et al.~\parencite{zhou2018predicting} applied attention mechanisms to multi-step citywide passenger demand prediction.  More recently, Liu et al.~\parencite{liu2023staeformer} proposed STAEformer, which augments a vanilla Transformer with spatio-temporal adaptive embeddings and achieves state-of-the-art results on standard traffic speed and flow benchmarks including METR-LA and PEMS-BAY; because STAEformer targets road-network speed prediction rather than zone-level pickup-count forecasting, direct numerical comparison with the present study is not feasible, but it represents the current frontier of spatio-temporal deep learning and motivates future work on graph-based demand forecasting.
 
+\section{Ride Pooling}
+
 On the ride pooling side, Santi et al.~\parencite{santi2014quantifying} established via shareability network analysis that ride consolidation can achieve up to $\sim$40\% cumulative trip-length reduction across the NYC fleet under idealised conditions, providing a theoretical upper bound for any operational algorithm.  Alonso-Mora et al.~\parencite{alonso2017demand} developed a real-time framework serving nearly the entire NYC demand with 15\% fewer vehicles via dynamic trip-vehicle assignment.  Agatz et al.~\parencite{agatz2012ridesharing} reviewed dynamic ridesharing optimisation and concluded that greedy heuristics offer a practical balance between solution quality and tractability.  Furuhata et al.~\parencite{furuhata2013ridesharing} identified four matching criteria, namely temporal flexibility, spatial proximity, directional compatibility, and willingness to share, which directly inform the five-filter design of Algorithm~\ref{alg:ride_pool}.  Tang et al.~\parencite{tang2018joint} characterised the joint distribution of taxi passenger counts and waiting times, providing empirical support for the 8-minute temporal threshold used in this study.
+
+\section{Ensemble Learning}
 
 In the ensemble learning literature, Wolpert~\parencite{wolpert1992stacking} formalised stacked generalisation, showing that a meta-learner trained on out-of-fold predictions reduces overfitting.  Breiman~\parencite{breiman2001rf} introduced Random Forests and Friedman~\parencite{friedman2001gbm} developed Gradient Boosting Machines, establishing the foundations for the ensemble strategies evaluated here.  Chen and Guestrin~\parencite{chen2016xgboost} refined boosting with regularisation and sparse-matrix support to produce XGBoost.  Zheng et al.~\parencite{zheng2020hybrid} demonstrated hybrid deep learning and gradient boosting for traffic speed prediction, motivating the XGBoost-LSTM hybrid in this study.  No prior work has systematically compared six ensemble strategies on the same spatio-temporal demand task with non-parametric statistical validation.  \autoref{tab:litreview} summarises representative prior work and the gaps that this study addresses.
 
@@ -15,23 +21,33 @@ In the ensemble learning literature, Wolpert~\parencite{wolpert1992stacking} for
 \centering
 \caption{Summary of representative prior work on taxi demand forecasting, ride pooling, and ensemble methods. Stat.\ Val.\ denotes non-parametric cross-model significance testing. Pooling denotes an operational ride-pooling component evaluated in the same study.\label{tab:litreview}}
 \small
-\begin{tabular}{@{}p{2.0cm}p{1.35cm}p{1.9cm}p{2.2cm}p{2.3cm}cc@{}}
+\begin{tabularx}{\textwidth}{@{}
+  >{\raggedright\arraybackslash}p{2.7cm}
+  >{\raggedright\arraybackslash}p{1.4cm}
+  >{\raggedright\arraybackslash}p{1.9cm}
+  >{\raggedright\arraybackslash}p{2.2cm}
+  >{\raggedright\arraybackslash}X
+  c c @{}}
 \toprule
-\textbf{Study} & \textbf{Domain} & \textbf{Dataset} & \textbf{Method} & \textbf{Key Result} & \textbf{Stat.\ Val.} & \textbf{Pooling} \\
+\textbf{Study} & \textbf{Domain} & \textbf{Dataset} & \textbf{Method} & \textbf{Key Result} & \textbf{Stat.} & \textbf{Pool} \\
 \midrule
-Kim et al.~\parencite{kim2020hybrid} & Demand & NYC Yellow Taxi & LR-LSTM hybrid & R\textsuperscript{2}=0.572; MAPE=15.2\% & No & No \\
-Xu et al.~\parencite{xu2017realtime} & Demand & NYC Taxi & LSTM RNN & MAPE~$\approx$12.5\%; real-time & No & No \\
-Zhang et al.~\parencite{zhang2017deep} & Crowd flow & Beijing / NYC & ST-ResNet & Deep residual grids & No & No \\
-Liu et al.~\parencite{liu2021epidemic} & Demand & NYC Yellow Taxi & XGBoost & R\textsuperscript{2}=0.984; COVID shift & No & No \\
-Yao et al.~\parencite{yao2018deeptraffic} & Demand & NYC Taxi & DeepMVST & Multi-view ST forecast & No & No \\
-Zhang et al.~\parencite{zhang2023deeptrip} & Trip pred. & GPS traces & DeepTrip & 81\% next-origin accuracy & No & No \\
-Li et al.~\parencite{li2018diffusion} & Traffic & Road network & DCRNN & Directed diffusion GNN & No & No \\
-Santi et al.~\parencite{santi2014quantifying} & Pooling & NYC Taxi & Shareability networks & $\sim$40\% length reduction bound & No & Yes \\
-Alonso-Mora et al.~\parencite{alonso2017demand} & Pooling & NYC Taxi & Dynamic assignment & 98\% demand; 15\% fewer vehicles & No & Yes \\
-Agatz et al.~\parencite{agatz2012ridesharing} & Pooling & Various & Optimisation survey & Greedy tractability trade-off & No & Yes \\
-Furuhata et al.~\parencite{furuhata2013ridesharing} & Pooling & Various & Matching criteria survey & Four operational criteria & No & Yes \\
-Wolpert~\parencite{wolpert1992stacking} & Ensemble & Synthetic & Stacked generalisation & OOF meta-learning & No & No \\
+\textcite{kim2020hybrid} & Demand & NYC Yellow Taxi & LR-LSTM hybrid & R\textsuperscript{2}=0.572; MAPE=15.2\% & No & No \\
+\textcite{xu2017realtime} & Demand & NYC Taxi & LSTM RNN & MAPE~$\approx$12.5\%; real-time & No & No \\
+\textcite{zhang2017deep} & Crowd flow & Beijing / NYC & ST-ResNet & Deep residual grids & No & No \\
+\textcite{liu2021epidemic} & Demand & NYC Yellow Taxi & XGBoost & R\textsuperscript{2}=0.984; COVID shift & No & No \\
+\textcite{yao2018deeptraffic} & Demand & NYC Taxi & DeepMVST & Multi-view ST forecast & No & No \\
+\textcite{zhang2023deeptrip} & Trip pred. & GPS traces & DeepTrip & 81\% next-origin accuracy & No & No \\
+\textcite{li2018diffusion} & Traffic & Road network & DCRNN & Directed diffusion GNN & No & No \\
+\textcite{santi2014quantifying} & Pooling & NYC Taxi & Shareability networks & $\sim$40\% length reduction bound & No & Yes \\
+\textcite{alonso2017demand} & Pooling & NYC Taxi & Dynamic assignment & 98\% demand; 15\% fewer vehicles & No & Yes \\
+\textcite{agatz2012ridesharing} & Pooling & Various & Optimisation survey & Greedy tractability trade-off & No & Yes \\
+\textcite{furuhata2013ridesharing} & Pooling & Various & Matching criteria survey & Four operational criteria & No & Yes \\
+\textcite{wolpert1992stacking} & Ensemble & Synthetic & Stacked generalisation & OOF meta-learning & No & No \\
 \textbf{This work} & Both & NYC Yellow Taxi & 14-model ensemble + 5-filter pooling & Stacking R\textsuperscript{2}=0.9922; 16.06\% pool rate & Yes & Yes \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
+
+\section{Summary}
+
+Across demand forecasting, ride pooling, and ensemble learning, three recurring gaps emerge. Forecasting studies rarely apply non-parametric significance testing across model classes. Pooling studies often report theoretical upper bounds rather than operational algorithms under passenger-acceptance constraints. Few works jointly quantify trip-level and city-scale economic and environmental impact. This thesis addresses these gaps within a single reproducible framework.
