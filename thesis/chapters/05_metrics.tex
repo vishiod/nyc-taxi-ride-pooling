@@ -26,7 +26,7 @@ MAE measures average absolute deviation and is less sensitive to outliers than R
  \label{eq:mae}
 \end{equation}
 
-In the cluster-bin setting, MAE provides a robust estimate of typical prediction error without the quadratic amplification of large misses. When RMSE and MAE diverge substantially for a given model, the gap indicates the presence of occasional large errors, often associated with peak-hour demand spikes in dense Manhattan clusters. MAE is reported alongside RMSE in \autoref{tab:results_full} to give readers both a outlier-sensitive and an outlier-robust view of absolute error magnitude.
+In the cluster-bin setting, MAE gives a stable estimate of typical prediction error without the quadratic amplification of large misses. When RMSE and MAE diverge substantially for a given model, the gap indicates the presence of occasional large errors, often associated with peak-hour demand spikes in dense Manhattan clusters. MAE is reported alongside RMSE in \autoref{tab:results_full} to give readers both an outlier-sensitive and an outlier-resistant view of absolute error magnitude.
 
 \paragraph{Limitations.} Like RMSE, MAE is expressed in raw pickup units and is not scale-independent. It provides no information about whether the model systematically over- or under-predicts, nor does it normalise for the base demand level of each bin. A MAE of 3.0 is more acceptable in a high-demand midtown cluster averaging 50 pickups per bin than in a low-demand outer-borough cluster averaging 5.
 
@@ -79,7 +79,7 @@ Point estimates on a single held-out test set cannot establish whether performan
 
 \paragraph{Wilcoxon signed-rank post-hoc tests.} When the Friedman test rejects the null, pairwise Wilcoxon signed-rank tests compare the best-performing model (Stacking) against each of the remaining thirteen models using the five paired fold-level RMSE observations. The Wilcoxon test is appropriate here because the paired differences are unlikely to be normally distributed and the sample size per comparison is small ($N{=}5$). Because thirteen simultaneous comparisons are conducted, the Bonferroni correction adjusts the significance threshold to $\alpha / 13 \approx 0.0038$, controlling the family-wise error rate. With only five folds, the minimum attainable two-sided Wilcoxon $p$-value is 0.031, meaning that Bonferroni-corrected pairwise tests may lack statistical power even when the Friedman test confirms overall significance. This power limitation is acknowledged in \autoref{ch:results} and \autoref{ch:conclusion}; the Friedman test is therefore treated as the primary evidence of cross-model significance, with Wilcoxon post-hoc results reported for completeness.
 
-\paragraph{Cross-validation stability.} To verify that model rankings are not artefacts of a particular fold count, mean RMSE and standard deviation are reported under both 5-fold and 10-fold chronological cross-validation for selected models (\autoref{tab:kfold}). Consistent rankings across fold configurations confirm that the metric-based conclusions are robust to the specific temporal partitioning scheme.
+\paragraph{Cross-validation stability.} To verify that model rankings are not artefacts of a particular fold count, mean RMSE and standard deviation are reported under both 5-fold and 10-fold chronological cross-validation for selected models (\autoref{tab:kfold}). Consistent rankings across fold configurations confirm that the metric-based conclusions are stable under the specific temporal partitioning scheme.
 
 \section{Summary}
 
